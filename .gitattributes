@@ -1,0 +1,2 @@
+# Keep Linux line endings everywhere: files run inside Linux containers.
+* text=auto eol=lf
