@@ -89,11 +89,17 @@ def _ocr(case: CaseFile, ctx: StageContext) -> StageOutput:
     return ocr(case, ctx)
 
 
+def _transcribe(case: CaseFile, ctx: StageContext) -> StageOutput:
+    from farq.pipeline.transcribe import transcribe
+
+    return transcribe(case, ctx)
+
+
 DEFAULT_STAGES: list[Stage] = [
     Stage("ingest", "cpu", _ingest),
     Stage("lookup", "io", lookup_known_fake),
     Stage("ocr", "cpu", _ocr),
-    Stage("transcribe", "gpu", nothing_yet, stub=True),  # M2: Whisper with word timings
+    Stage("transcribe", "gpu", _transcribe),
     Stage("entities", "cpu", nothing_yet, stub=True),  # M2: numbers, UPI IDs, links
     Stage("verify", "io", nothing_yet, stub=True),  # M3: source map, official lists
     Stage("analyse", "gpu", nothing_yet, stub=True),  # M4: audio-visual binding, audio head

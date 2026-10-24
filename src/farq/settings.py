@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     ocr_min_score: float = 0.6
     ocr_det_side: int = 736
 
+    # Whisper: our own conversion of OpenAI's weights (scripts/convert_whisper.py).
+    # int8 weights with float16 maths on the GPU; plain int8 on CPU.
+    whisper_model_dir: Path = REPO_ROOT / "models" / "whisper-large-v3-turbo-ct2"
+    whisper_gpu_compute_type: str = "int8_float16"
+    whisper_beam_size: int = 5
+
     rules_path: Path = REPO_ROOT / "config" / "rules" / "verdicts.yaml"
 
     # Queue that GPU stages are sent to. Set to "cpu" on machines without an

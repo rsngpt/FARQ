@@ -61,6 +61,39 @@ def fake_ocr(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
     yield engine
 
 
+class FakeAsrEngine:
+    """Stand-in for Whisper: returns `result` for every file."""
+
+    name = "fake-asr"
+    version = "test"
+
+    def __init__(self) -> None:
+        self.result: dict = {
+            "language": "en",
+            "language_probability": 0.9,
+            "duration_s": 0.0,
+            "speech_s": 0.0,
+            "text": "",
+            "segments": [],
+        }
+        self.files_heard: list[Path] = []
+
+    def transcribe(self, wav: Path) -> dict:
+        self.files_heard.append(wav)
+        return self.result
+
+
+@pytest.fixture(autouse=True)
+def fake_asr(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
+    """Tests use the stand-in speech-to-text unless marked real_models."""
+    if request.node.get_closest_marker("real_models"):
+        yield None
+        return
+    engine = FakeAsrEngine()
+    monkeypatch.setattr("farq.pipeline.transcribe.get_asr_engine", lambda *a: engine)
+    yield engine
+
+
 @pytest.fixture
 def set_setting(monkeypatch: pytest.MonkeyPatch) -> Callable[[str, str], None]:
     """Change one setting for this test (settings are cached, so clear the cache)."""

@@ -8,6 +8,7 @@ x-app: &app
   restart: unless-stopped
   volumes:
     - models:/home/farq/.paddlex  # downloaded model weights, shared and kept
+    - ./models:/app/models:ro  # weights we converted ourselves (scripts/convert_whisper.py)
   depends_on:
     redis:
       condition: service_healthy
@@ -52,6 +53,10 @@ services:
   # .env.example). One job at a time so two large models are never loaded together.
   worker-gpu:
     <<: *app
+    build:
+      context: .
+      target: gpu  # adds NVIDIA's CUDA libraries
+    image: farq-app-gpu
     profiles: ["gpu"]
     command: celery -A farq.workers.celery_app worker -Q gpu -n gpu@%h --pool=solo --loglevel=info
     deploy:
