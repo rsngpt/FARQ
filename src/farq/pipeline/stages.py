@@ -76,8 +76,14 @@ def lookup_known_fake(case: CaseFile, ctx: StageContext) -> StageOutput:
     )
 
 
+def _ingest(case: CaseFile, ctx: StageContext) -> StageOutput:
+    from farq.pipeline.ingest import ingest  # imported here: ingest imports this module
+
+    return ingest(case, ctx)
+
+
 DEFAULT_STAGES: list[Stage] = [
-    Stage("ingest", "cpu", nothing_yet, stub=True),  # M2: ffprobe, keyframes, 16 kHz audio
+    Stage("ingest", "cpu", _ingest),
     Stage("lookup", "io", lookup_known_fake),
     Stage("ocr", "cpu", nothing_yet, stub=True),  # M2: PaddleOCR on keyframes
     Stage("transcribe", "gpu", nothing_yet, stub=True),  # M2: Whisper with word timings

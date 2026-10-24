@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     intake_api_key: SecretStr = SecretStr("")
     max_upload_mb: int = 64
 
+    # Ingest limits: only the first max_media_seconds are processed.
+    max_media_seconds: float = 600
+    max_keyframes: int = 120
+    ffmpeg_timeout_s: float = 120
+
     rules_path: Path = REPO_ROOT / "config" / "rules" / "verdicts.yaml"
 
     # Queue that GPU stages are sent to. Set to "cpu" on machines without an

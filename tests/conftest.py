@@ -1,3 +1,6 @@
+import hashlib
+import shutil
+import subprocess
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import BinaryIO
@@ -14,7 +17,7 @@ from farq.api.main import app
 from farq.decision.engine import RulesEngine
 from farq.domain.casefile import CaseContext, Evidence, Indicates, SourceType, Strength
 from farq.settings import get_settings
-from farq.storage.repo import CaseRepository
+from farq.storage.repo import CaseRepository, media_key_for
 from farq.storage.tables import Base
 
 API_KEY = "test-api-key"
@@ -29,6 +32,17 @@ def _test_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+@pytest.fixture
+def set_setting(monkeypatch: pytest.MonkeyPatch) -> Callable[[str, str], None]:
+    """Change one setting for this test (settings are cached, so clear the cache)."""
+
+    def _set(name: str, value: str) -> None:
+        monkeypatch.setenv(name, value)
+        get_settings.cache_clear()
+
+    return _set
 
 
 @pytest.fixture
@@ -101,20 +115,52 @@ def make_evidence() -> Callable[..., Evidence]:
     return _make
 
 
+def ffmpeg_make(out: Path, *args: str) -> bytes:
+    """Generate a synthetic media file with FFmpeg (test patterns, tones)."""
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError("FFmpeg is not on PATH; see README (winget install Gyan.FFmpeg)")
+    subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-y", *args, str(out)], check=True, capture_output=True
+    )
+    return out.read_bytes()
+
+
+def synthetic_video(out: Path, seconds: int, with_audio: bool = True) -> bytes:
+    video = ["-f", "lavfi", "-i", f"testsrc=duration={seconds}:size=320x240:rate=10"]
+    audio = ["-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}"] if with_audio else []
+    return ffmpeg_make(out, *video, *audio, "-shortest")
+
+
+@pytest.fixture(scope="session")
+def sample_video(tmp_path_factory: pytest.TempPathFactory) -> bytes:
+    """A 3-second test-pattern video with a tone."""
+    return synthetic_video(tmp_path_factory.mktemp("media") / "sample.mp4", seconds=3)
+
+
 @pytest.fixture
-def new_case(repo: CaseRepository) -> Callable[..., UUID]:
+def new_case(
+    repo: CaseRepository, media: InMemoryMediaStore, sample_video: bytes
+) -> Callable[..., UUID]:
+    """Create a case whose media is in the store, as intake would leave it."""
     counter = iter(range(1_000_000))
 
-    def _new(sha256: str = "a" * 64, money_sent: bool | None = None) -> UUID:
+    def _new(
+        content: bytes | None = None,
+        extension: str = ".mp4",
+        money_sent: bool | None = None,
+        sha256: str | None = None,
+    ) -> UUID:
+        content = sample_video if content is None else content
         case_id, _ = repo.create_case(
             channel="test",
             message_id=f"msg-{next(counter)}",
             user_hash="h" * 64,
-            media_sha256=sha256,
-            media_bytes=10,
-            media_extension=".mp4",
+            media_sha256=sha256 or hashlib.sha256(content).hexdigest(),
+            media_bytes=len(content),
+            media_extension=extension,
             context=CaseContext(money_sent=money_sent),
         )
+        media.objects[media_key_for(case_id, extension)] = content
         return case_id
 
     return _new

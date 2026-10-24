@@ -1,3 +1,5 @@
+import hashlib
+
 import pytest
 
 from farq.domain.casefile import Artifact, CaseStatus, StageStatus, Verdict
@@ -60,19 +62,21 @@ def test_stage_gets_an_empty_workdir_that_is_removed_after(repo, rules, media, n
     assert not seen["dir"].exists()
 
 
-def test_known_fake_is_confirmed(repo, rules, media, new_case):
-    repo.add_known_fake(sha256="b" * 64, label="test fake video", confirmed_by="reviewer:test")
+def test_known_fake_is_confirmed(repo, rules, media, new_case, sample_video):
+    sha = hashlib.sha256(sample_video).hexdigest()
+    repo.add_known_fake(sha256=sha, label="test fake video", confirmed_by="reviewer:test")
     repo.commit()
-    case = run_pipeline(new_case(sha256="b" * 64), repo, rules, media)
+    case = run_pipeline(new_case(), repo, rules, media)
     assert case.decision.verdict == Verdict.CONFIRMED_SCAM
     assert "CONFIRMED SCAM" in case.reply_text
     assert "test fake video" in case.reply_text  # the cited reason
 
 
-def test_verdict_writes_an_audit_row(repo, rules, media, new_case):
-    repo.add_known_fake(sha256="b" * 64, label="test fake", confirmed_by="reviewer:test")
+def test_verdict_writes_an_audit_row(repo, rules, media, new_case, sample_video):
+    sha = hashlib.sha256(sample_video).hexdigest()
+    repo.add_known_fake(sha256=sha, label="test fake", confirmed_by="reviewer:test")
     repo.commit()
-    case = run_pipeline(new_case(sha256="b" * 64), repo, rules, media)
+    case = run_pipeline(new_case(), repo, rules, media)
     [row] = repo.list_audit(case.id)
     assert row.actor == "rules-engine"
     assert row.action == "verdict"

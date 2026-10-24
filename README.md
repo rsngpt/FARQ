@@ -48,6 +48,9 @@ Read the generated file before committing. Migrations run automatically on
 
 ## Develop
 
+Tests make small synthetic videos, so FFmpeg must be on your PATH
+(`winget install -e --id Gyan.FFmpeg`, then open a new terminal).
+
 ```powershell
 uv sync
 uv run pytest
