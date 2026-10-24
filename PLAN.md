@@ -46,7 +46,16 @@ Code freeze: PENDING. Rehearsal: PENDING.
       (`POST /cases`, `farq check`), pipeline runner (stub stages + real
       known-fake sha256 lookup), YAML rules engine, audit log, /metrics/latency
 - [ ] Telegram adapter (deferred for now)
-- [ ] Split stages across io / cpu / gpu queues (today the whole pipeline runs as one io task)
+- [x] M2.1 Each stage runs on its own queue (io / cpu / gpu); artifacts table
+- [x] M2.2 Ingest: guarded ffprobe, keyframes (1/s, max 120), 16 kHz mono audio
+- [x] M2 follow-up: plain "couldn't open this file" reply
+- [x] M2.3 OCR: PaddleOCR, up to 12 frames, Hindi + English, merged lines with times
+- [ ] M2.4 Whisper large-v3-turbo (weights converted by us from OpenAI's), word timings
+- [ ] M2.5 Entities (numbers, UPI IDs, links, return promises) + weak rule evidence
+- [ ] M2.6 Timing run on a 1-minute clip vs the 60 s target
+
+Measured so far (container, synthetic 47 s video with overlays and a team
+recording): ingest 2.4 s, OCR 23 s for 12 frames. Not yet measured: Whisper.
 
 ## Rules every stage follows
 - Evidence rows carry: id, source_type (model / match / list / rule), strength
@@ -97,6 +106,8 @@ audio back in, coupling snaps into step.
 ## Bugs
 | # | Bug | Owner | Fixed |
 |---|---|---|---|
+| 1 | PaddlePaddle 3.3.1 crashes with oneDNN on OCR models (Windows and Linux) | - | worked around: oneDNN off |
+| 2 | OCR on Windows laptop is slow (~2 min for the real-model test incl. download); container is fine | - | not needed for production |
 
 ## Decisions
 - Product and code name: FARQ. Repo folder: RAKSHAM.
