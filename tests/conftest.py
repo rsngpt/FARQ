@@ -125,6 +125,30 @@ def fake_embedder(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatc
     yield embedder
 
 
+class FakeFaceFinder:
+    """Stand-in for MediaPipe: returns `regions_for(frame)`; no face by default."""
+
+    name = "fake-face-finder"
+    version = "test"
+
+    def __init__(self) -> None:
+        self.regions_for = lambda rgb: None
+
+    def regions(self, rgb):
+        return self.regions_for(rgb)
+
+
+@pytest.fixture(autouse=True)
+def fake_face_finder(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
+    """Tests use the stand-in face finder unless marked real_models."""
+    if request.node.get_closest_marker("real_models"):
+        yield None
+        return
+    finder = FakeFaceFinder()
+    monkeypatch.setattr("farq.pipeline.source_map.get_face_finder", lambda *a: finder)
+    yield finder
+
+
 @pytest.fixture
 def set_setting(monkeypatch: pytest.MonkeyPatch) -> Callable[[str, str], None]:
     """Change one setting for this test (settings are cached, so clear the cache)."""

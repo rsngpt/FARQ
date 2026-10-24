@@ -40,10 +40,16 @@ def compose_reply(case: CaseFile, decision: Decision) -> str:
         headline = UNREADABLE
     lines += [f"Verdict: {decision.verdict.label}", headline]
 
-    reasons = [e.reason for e in case.evidence_by_ids(decision.evidence_ids)][:MAX_REASONS]
+    cited = case.evidence_by_ids(decision.evidence_ids)
+    cited.sort(key=lambda e: e.strength.rank, reverse=True)  # strongest first
+    reasons = [e.reason for e in cited][:MAX_REASONS]
     if reasons:
         heading = "Warning signs:" if decision.verdict == Verdict.NOT_VERIFIED else "Why:"
         lines += ["", heading, *(f"- {r}" for r in reasons)]
+
+    copies = [e for e in case.evidence if e.type == "unaltered_copy"]
+    if copies and decision.verdict == Verdict.NOT_VERIFIED:
+        lines += ["", f"{copies[0].reason} That alone doesn't prove what it says is true."]
 
     lines += ["", NEXT_STEPS[decision.verdict]]
     return "\n".join(lines)

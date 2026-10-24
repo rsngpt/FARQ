@@ -33,6 +33,7 @@ class LibraryClip:
     fingerprints: dict[str, Any]
     transcript: dict[str, Any] | None
     phrases: list[dict[str, Any]] | None = None  # [{"start","end","text","vec"}], BGE-M3
+    media_key: str | None = None  # the clip's video in the media store
 
 
 def add_clip(
@@ -121,6 +122,7 @@ def load_clips(session: Session) -> list[LibraryClip]:
             fingerprints=r.fingerprints,
             transcript=r.transcript,
             phrases=r.phrases,
+            media_key=r.media_key,
         )
         for r in rows
     ]

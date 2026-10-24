@@ -82,6 +82,15 @@ def test_pipeline_stage_stores_the_source_map(library, repo, rules, media, new_c
     data = case.artifact("source_map").data
     assert data["library_clips"] == 2
     assert [s.get("title") for s in data["visual"]] == ["clip-a", "clip-b"]
+    # Each picture match was lined up with its original: the fake was cut from
+    # clip-a at 2 s and clip-b at 1 s.
+    offsets = {o["segment"]["title"]: o["offset_s"] for o in data["originals"]}
+    assert offsets["clip-a"] == pytest.approx(2.0, abs=0.12)
+    # offset = library time - video time: clip-b's 1 s plays at 3 s in the fake.
+    assert offsets["clip-b"] == pytest.approx(1.0 - 3.0, abs=0.12)
+    # No face in synthetic patterns (stand-in finder): no mouth reading, no evidence.
+    assert {o["mouth_level"] for o in data["originals"]} == {"unknown"}
+    assert case.evidence == []
 
 
 def test_empty_library_or_video(media_dir, tmp_path):
