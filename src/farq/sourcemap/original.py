@@ -79,7 +79,7 @@ class MediaPipeFaceFinder:
             )
         )
 
-    def regions(self, rgb: np.ndarray) -> tuple[Box, Box] | None:
+    def _landmarks(self, rgb: np.ndarray) -> np.ndarray | None:
         image = self._mp.Image(
             image_format=self._mp.ImageFormat.SRGB, data=np.ascontiguousarray(rgb)
         )
@@ -87,8 +87,21 @@ class MediaPipeFaceFinder:
         if not result.face_landmarks:
             return None
         h, w = rgb.shape[:2]
-        pts = np.array([(p.x * w, p.y * h) for p in result.face_landmarks[0]])
+        return np.array([(p.x * w, p.y * h) for p in result.face_landmarks[0]])
+
+    def regions(self, rgb: np.ndarray) -> tuple[Box, Box] | None:
+        pts = self._landmarks(rgb)
+        if pts is None:
+            return None
+        h, w = rgb.shape[:2]
         return _box(pts[LIPS], pad=0.25, size=(w, h)), _box(pts[FACE_OVAL], pad=0.0, size=(w, h))
+
+    def motion(self, rgb: np.ndarray) -> tuple[float, float] | None:
+        """Head nod and eyebrow height for the voice-and-body check."""
+        from farq.binding import motion_from_landmarks
+
+        pts = self._landmarks(rgb)
+        return None if pts is None else motion_from_landmarks(pts)
 
 
 @lru_cache

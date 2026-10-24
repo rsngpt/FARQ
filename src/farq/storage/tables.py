@@ -145,6 +145,8 @@ class LibraryClipRow(Base):
     transcript: Mapped[dict[str, Any] | None]  # same shape as the transcript artifact
     # Phrase windows with BGE-M3 embeddings: [{"start", "end", "text", "vec"}]
     phrases: Mapped[list[dict[str, Any]] | None]
+    # Voice-and-body sync score of this genuine clip (calibrates layer 3)
+    binding_score: Mapped[float | None]
     created_at: Mapped[datetime]
 
 

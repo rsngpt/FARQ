@@ -107,6 +107,12 @@ def _source_map(case: CaseFile, ctx: StageContext) -> StageOutput:
     return source_map(case, ctx)
 
 
+def _analyse(case: CaseFile, ctx: StageContext) -> StageOutput:
+    from farq.pipeline.analyse import analyse
+
+    return analyse(case, ctx)
+
+
 DEFAULT_STAGES: list[Stage] = [
     Stage("ingest", "cpu", _ingest),
     Stage("lookup", "io", lookup_known_fake),
@@ -118,5 +124,5 @@ DEFAULT_STAGES: list[Stage] = [
     # the 2-process CPU worker wouldn't fit Docker's 7.6 GB).
     Stage("source_map", "gpu", _source_map),
     Stage("verify", "io", nothing_yet, stub=True),  # official lists (RBI, NSE, SEBI)
-    Stage("analyse", "gpu", nothing_yet, stub=True),  # M4: audio-visual binding, audio head
+    Stage("analyse", "gpu", _analyse),  # voice-and-body check (CPU work, one-job worker)
 ]

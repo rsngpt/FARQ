@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.115",
     "faster-whisper==1.2.1",
     "httpx>=0.28",
+    "librosa==1.0.0",
     "mediapipe==1.1.1",
     "paddleocr==3.7.0",
     "paddlepaddle==3.3.1",
@@ -21,6 +22,7 @@ dependencies = [
     "pyyaml>=6.0",
     "sqlalchemy>=2.0",
     "uvicorn[standard]>=0.32",
+    "weasyprint==70.0",
 ]
 
 [project.scripts]

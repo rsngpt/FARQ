@@ -11,6 +11,7 @@ from typing import Any
 
 from farq.channels.responder import reason_evidence
 from farq.domain.casefile import CaseFile, CaseStatus, Evidence, Verdict
+from farq.settings import get_settings
 
 MAX_REASONS = 4
 
@@ -215,7 +216,8 @@ def _report(case: CaseFile, verdict: Verdict, cited: list[Evidence]) -> dict[str
     if cited:
         lines.append("Checks by FARQ found: " + " ".join(e.reason for e in cited[:MAX_REASONS]))
     lines.append(f"File fingerprint (SHA-256): {case.media_sha256}.")
-    return {"available": True, "complaint_text": " ".join(lines), "pdf_url": None}
+    pdf_url = f"{get_settings().public_base_url.rstrip('/')}/cases/{case.id}/report.pdf"
+    return {"available": True, "complaint_text": " ".join(lines), "pdf_url": pdf_url}
 
 
 def _ingest_failed(case: CaseFile) -> bool:

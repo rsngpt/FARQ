@@ -33,8 +33,10 @@ RUN apt-get update \
 
 # MediaPipe's face landmarker needs EGL/GLES libraries the slim image lacks
 # (it failed with "libEGL.so.1: cannot open shared object file").
+# WeasyPrint (police report PDF) needs Pango, plus fonts with Devanagari.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libegl1 libgles2 \
+       libpango-1.0-0 libpangoft2-1.0-0 fonts-dejavu-core fonts-lohit-deva \
     && rm -rf /var/lib/apt/lists/*
 
 COPY src ./src

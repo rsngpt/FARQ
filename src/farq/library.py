@@ -20,6 +20,7 @@ from farq.storage.media import MediaStore
 from farq.storage.tables import LibraryClipRow
 
 if TYPE_CHECKING:
+    from farq.binding import FaceMotion
     from farq.embed import Embedder
 
 
@@ -34,6 +35,7 @@ class LibraryClip:
     transcript: dict[str, Any] | None
     phrases: list[dict[str, Any]] | None = None  # [{"start","end","text","vec"}], BGE-M3
     media_key: str | None = None  # the clip's video in the media store
+    binding_score: float | None = None  # voice-and-body sync of this genuine clip
 
 
 def add_clip(
@@ -47,10 +49,11 @@ def add_clip(
     source: str,
     consent_note: str | None,
     embedder: "Embedder | None" = None,
+    motion: "FaceMotion | None" = None,
 ) -> tuple[UUID, bool]:
     """Fingerprint, transcribe and (with an embedder) embed the phrases of a
-    genuine clip, and store it. Returns (clip_id, already_there); the same file
-    is never added twice."""
+    genuine clip, and (with a face model) measure its voice-and-body sync, then
+    store it. Returns (clip_id, already_there); the same file is never added twice."""
     sha = _sha256(path)
     existing = session.scalar(select(LibraryClipRow.id).where(LibraryClipRow.sha256 == sha))
     if existing is not None:
@@ -67,7 +70,7 @@ def add_clip(
         original = work / f"original{path.suffix.lower()}"
         shutil.copyfile(path, original)
         fingerprints = fingerprint_video(original, work, info.duration_s)
-        transcript = None
+        transcript = binding_score = None
         if info.audio is not None:
             wav = work / "audio16k.wav"
             ffmpeg.extract_audio(
@@ -75,6 +78,11 @@ def add_clip(
                 timeout=settings.ffmpeg_timeout_s,
             )  # fmt: skip
             transcript = asr.transcribe(wav) | {"model": f"{asr.name} {asr.version}"}
+            if motion is not None:
+                from farq.binding import measure_clip
+
+                binding_score = measure_clip(original, wav, motion,
+                                             timeout=settings.ffmpeg_timeout_s)  # fmt: skip
         phrases = _embed_phrases(transcript, embedder) if embedder else None
         media_key = f"library/{clip_id}/original{path.suffix.lower()}"
         with original.open("rb") as f:
@@ -93,6 +101,7 @@ def add_clip(
             fingerprints=fingerprints,
             transcript=transcript,
             phrases=phrases,
+            binding_score=binding_score,
             created_at=utcnow(),
         )
     )
@@ -123,6 +132,7 @@ def load_clips(session: Session) -> list[LibraryClip]:
             transcript=r.transcript,
             phrases=r.phrases,
             media_key=r.media_key,
+            binding_score=r.binding_score,
         )
         for r in rows
     ]

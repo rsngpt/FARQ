@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Shared key for the local upload endpoint (X-API-Key header).
     intake_api_key: SecretStr = SecretStr("")
     max_upload_mb: int = 64
+    # Public address of this API (the Cloudflare tunnel), for links in results
+    # such as the report PDF. Empty: links are relative paths.
+    public_base_url: str = ""
 
     # Ingest limits: only the first max_media_seconds are processed.
     max_media_seconds: float = 600

@@ -77,12 +77,16 @@ def _library(args: argparse.Namespace) -> int:
 
         embedder = get_embedder(settings.bge_m3_dir, settings.bge_m3_revision,
                                 settings.embed_threads)  # fmt: skip
+        from farq.sourcemap.original import get_face_finder
+
+        motion = get_face_finder(settings.face_model_path)
         for path in args.files:
             started = time.perf_counter()
             clip_id, existed = add_clip(
                 session, media, asr, path,
                 person=args.person, title=args.title or path.stem,
                 source=args.source, consent_note=args.consent, embedder=embedder,
+                motion=motion,
             )  # fmt: skip
             note = (
                 "already in library"
