@@ -9,6 +9,8 @@ dependencies = [
     "celery[redis]>=5.4",
     "fastapi>=0.115",
     "httpx>=0.28",
+    "paddleocr==3.7.0",
+    "paddlepaddle==3.3.1",
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.6",
     "python-multipart>=0.0.18",
@@ -43,3 +45,6 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "real_models: runs a real model (downloads it on first use); deselect with -m 'not real_models'",
+]

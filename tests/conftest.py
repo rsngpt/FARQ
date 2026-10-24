@@ -16,6 +16,7 @@ from farq.api.deps import get_enqueue, get_media_store, get_session
 from farq.api.main import app
 from farq.decision.engine import RulesEngine
 from farq.domain.casefile import CaseContext, Evidence, Indicates, SourceType, Strength
+from farq.ocr.engine import TextLine
 from farq.settings import get_settings
 from farq.storage.repo import CaseRepository, media_key_for
 from farq.storage.tables import Base
@@ -32,6 +33,32 @@ def _test_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+class FakeOcrEngine:
+    """Stand-in for PaddleOCR: returns `lines_for(frame_index)` for each image."""
+
+    name = "fake-ocr"
+    version = "test"
+
+    def __init__(self) -> None:
+        self.lines_for: Callable[[int], list[TextLine]] = lambda i: []
+        self.images_read: list[Path] = []
+
+    def read(self, images: list[Path]) -> list[list[TextLine]]:
+        self.images_read += images
+        return [self.lines_for(i) for i in range(len(images))]
+
+
+@pytest.fixture(autouse=True)
+def fake_ocr(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
+    """Tests use the stand-in OCR unless marked real_models."""
+    if request.node.get_closest_marker("real_models"):
+        yield None
+        return
+    engine = FakeOcrEngine()
+    monkeypatch.setattr("farq.pipeline.ocr.get_ocr_engine", lambda det_side: engine)
+    yield engine
 
 
 @pytest.fixture

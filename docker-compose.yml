@@ -6,6 +6,8 @@ x-app: &app
   image: farq-app
   env_file: .env
   restart: unless-stopped
+  volumes:
+    - models:/home/farq/.paddlex  # downloaded model weights, shared and kept
   depends_on:
     redis:
       condition: service_healthy
@@ -107,3 +109,4 @@ services:
 volumes:
   pgdata16:
   s3data:
+  models:

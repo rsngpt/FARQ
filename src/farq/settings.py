@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     max_keyframes: int = 120
     ffmpeg_timeout_s: float = 120
 
+    # OCR: frames read per video (spread evenly), minimum confidence kept, and
+    # the long side frames are shrunk to before text detection.
+    ocr_max_frames: int = 12
+    ocr_min_score: float = 0.6
+    ocr_det_side: int = 736
+
     rules_path: Path = REPO_ROOT / "config" / "rules" / "verdicts.yaml"
 
     # Queue that GPU stages are sent to. Set to "cpu" on machines without an

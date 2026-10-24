@@ -76,16 +76,23 @@ def lookup_known_fake(case: CaseFile, ctx: StageContext) -> StageOutput:
     )
 
 
+# Stage modules import this one, so they are imported inside these wrappers.
 def _ingest(case: CaseFile, ctx: StageContext) -> StageOutput:
-    from farq.pipeline.ingest import ingest  # imported here: ingest imports this module
+    from farq.pipeline.ingest import ingest
 
     return ingest(case, ctx)
+
+
+def _ocr(case: CaseFile, ctx: StageContext) -> StageOutput:
+    from farq.pipeline.ocr import ocr
+
+    return ocr(case, ctx)
 
 
 DEFAULT_STAGES: list[Stage] = [
     Stage("ingest", "cpu", _ingest),
     Stage("lookup", "io", lookup_known_fake),
-    Stage("ocr", "cpu", nothing_yet, stub=True),  # M2: PaddleOCR on keyframes
+    Stage("ocr", "cpu", _ocr),
     Stage("transcribe", "gpu", nothing_yet, stub=True),  # M2: Whisper with word timings
     Stage("entities", "cpu", nothing_yet, stub=True),  # M2: numbers, UPI IDs, links
     Stage("verify", "io", nothing_yet, stub=True),  # M3: source map, official lists

@@ -25,8 +25,11 @@ COPY alembic.ini ./
 COPY migrations ./migrations
 COPY config ./config
 
-# Don't run as root inside the container.
-RUN useradd --create-home --uid 1000 farq
+# Don't run as root inside the container. The model cache folder exists here,
+# owned by farq, so a Docker volume mounted on it gets the same owner.
+RUN useradd --create-home --uid 1000 farq \
+    && mkdir -p /home/farq/.paddlex \
+    && chown farq:farq /home/farq/.paddlex
 USER farq
 
 CMD ["uvicorn", "farq.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
