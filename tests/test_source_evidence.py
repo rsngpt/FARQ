@@ -64,23 +64,32 @@ def _verdict(repo, rules, media, new_case, data):
     return run_pipeline(new_case(), repo, rules, media, [seed])
 
 
-def test_lip_synced_collage_is_likely_scam_for_review(repo, rules, media, new_case):
+def test_lip_synced_collage_is_likely_scam_with_both_reasons(repo, rules, media, new_case):
     data = {"originals": [comp("high", [{"start": 4, "end": 12}])],
             "speech": [voice("B", "College announcement")]}  # fmt: skip
     case = _verdict(repo, rules, media, new_case, data)
     assert case.decision.verdict == Verdict.LIKELY_SCAM
-    assert case.decision.needs_review
     assert "weren't recorded together" in case.reply_text
+    assert "lips were changed" in case.reply_text  # shown even though the rule didn't need it
+    assert "reviewer" not in case.reply_text  # the reviewer flow was dropped
     assert "lips were changed" in case.reply_text
 
 
-def test_plain_stitch_alone_is_not_verified_with_the_warning_first(repo, rules, media, new_case):
-    """One strong signal from one kind of source never decides (rules engine)."""
+def test_plain_stitch_alone_is_likely_scam(repo, rules, media, new_case):
+    """Picture and voice from different recordings rests on two independent
+    matches, so on its own it gives LIKELY (team decision, 24 Oct)."""
     data = {"originals": [comp("unknown")], "speech": [voice("B", "College announcement")]}
     case = _verdict(repo, rules, media, new_case, data)
+    assert case.decision.verdict == Verdict.LIKELY_SCAM
+    assert case.decision.rule_id == "picture_voice_mismatch"
+    assert "weren't recorded together" in case.reply_text.split("Why:")[1]
+
+
+def test_words_differ_alone_still_does_not_decide(repo, rules, media, new_case):
+    """Only the picture/voice mismatch got its own rule; other single signals don't."""
+    data = {"originals": [comp(speech={"similarity": 0.1, "changes": []})], "speech": []}
+    case = _verdict(repo, rules, media, new_case, data)
     assert case.decision.verdict == Verdict.NOT_VERIFIED
-    warnings = case.reply_text.split("Warning signs:")[1].strip().splitlines()
-    assert "weren't recorded together" in warnings[0]
 
 
 def test_unchanged_copy_is_still_never_called_genuine(repo, rules, media, new_case):

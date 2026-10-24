@@ -26,6 +26,18 @@ rules:
           indicates: scam
           human_reviewed: true
 
+  - id: picture_voice_mismatch
+    description: >
+      The picture and the voice come from different recordings in the library.
+      This already rests on two independent matches (picture fingerprints and
+      speech), so on its own it is enough for LIKELY (team decision, 24 Oct).
+    verdict: likely_scam
+    when:
+      - evidence:
+          type: not_recorded_together
+          min_strength: strong
+          indicates: scam
+
   - id: independent_strong_signals
     description: >
       Strong scam signals from at least two different kinds of source, and no

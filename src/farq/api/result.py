@@ -9,6 +9,7 @@ Dropped features (campaigns, reviewer, timeline image) are returned as null.
 
 from typing import Any
 
+from farq.channels.responder import reason_evidence
 from farq.domain.casefile import CaseFile, CaseStatus, Evidence, Verdict
 
 MAX_REASONS = 4
@@ -83,8 +84,7 @@ def build_result(case: CaseFile) -> dict[str, Any]:
     if case.decision is None:
         return status_of(case)
     verdict = case.decision.verdict
-    cited = sorted(case.evidence_by_ids(case.decision.evidence_ids),
-                   key=lambda e: e.strength.rank, reverse=True)  # fmt: skip
+    cited = reason_evidence(case, case.decision)  # verdict's evidence, then other scam signs
     altered = [e for e in case.evidence if e.type in ALTERATION_TYPES]
     copy = next((e for e in case.evidence if e.type == "unaltered_copy"), None)
 

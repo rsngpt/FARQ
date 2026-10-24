@@ -1,7 +1,7 @@
-"""Turns a decision into the reply a user reads. Plain text for now; channel
-adapters (Telegram, WhatsApp) will add buttons and formatting on top."""
+"""Turns a decision into the plain-text reply (farq check, logs). The WhatsApp
+bot renders the JSON result from farq.api.result instead."""
 
-from farq.domain.casefile import CaseFile, Decision, StageStatus, Verdict
+from farq.domain.casefile import CaseFile, Decision, Evidence, Indicates, StageStatus, Verdict
 
 MAX_REASONS = 4
 
@@ -14,7 +14,7 @@ HELPLINE = "call 1930 (National Cyber Crime Helpline) or report at cybercrime.go
 
 HEADLINES = {
     Verdict.CONFIRMED_SCAM: "This video is a known scam.",
-    Verdict.LIKELY_SCAM: "This looks like a scam. A reviewer is checking it.",
+    Verdict.LIKELY_SCAM: "This looks like a scam.",
     Verdict.NOT_VERIFIED: "We could not verify this video. That does not mean it is genuine.",
 }
 
@@ -40,9 +40,7 @@ def compose_reply(case: CaseFile, decision: Decision) -> str:
         headline = UNREADABLE
     lines += [f"Verdict: {decision.verdict.label}", headline]
 
-    cited = case.evidence_by_ids(decision.evidence_ids)
-    cited.sort(key=lambda e: e.strength.rank, reverse=True)  # strongest first
-    reasons = [e.reason for e in cited][:MAX_REASONS]
+    reasons = [e.reason for e in reason_evidence(case, decision)][:MAX_REASONS]
     if reasons:
         heading = "Warning signs:" if decision.verdict == Verdict.NOT_VERIFIED else "Why:"
         lines += ["", heading, *(f"- {r}" for r in reasons)]
@@ -53,6 +51,17 @@ def compose_reply(case: CaseFile, decision: Decision) -> str:
 
     lines += ["", NEXT_STEPS[decision.verdict]]
     return "\n".join(lines)
+
+
+def reason_evidence(case: CaseFile, decision: Decision) -> list[Evidence]:
+    """The evidence the verdict rule cited, then any other evidence pointing to a
+    scam (a rule cites only what it needed, but the user should see every real
+    reason), strongest first."""
+    cited = case.evidence_by_ids(decision.evidence_ids)
+    cited_ids = {e.id for e in cited}
+    extra = [e for e in case.evidence if e.indicates == Indicates.SCAM and e.id not in cited_ids]
+    # sorted() is stable, so cited evidence stays ahead of extra at equal strength.
+    return sorted(cited + extra, key=lambda e: e.strength.rank, reverse=True)
 
 
 def _ingest_failed(case: CaseFile) -> bool:
