@@ -93,6 +93,28 @@ def test_pipeline_stage_stores_the_source_map(library, repo, rules, media, new_c
     assert case.evidence == []
 
 
+def test_face_finder_failure_keeps_the_source_map(
+    library, repo, rules, media, new_case, media_dir, monkeypatch
+):
+    """Seen in the container: MediaPipe couldn't load (missing libEGL) and the
+    whole source map was lost. Now only the mouth check is skipped."""
+    from farq.pipeline.ingest import ingest
+    from farq.pipeline.runner import run_pipeline
+    from farq.pipeline.source_map import source_map
+    from farq.pipeline.stages import Stage
+
+    def broken(*args):
+        raise OSError("libEGL.so.1: cannot open shared object file")
+
+    monkeypatch.setattr("farq.pipeline.source_map.get_face_finder", broken)
+    stages = [Stage("ingest", "cpu", ingest), Stage("source_map", "cpu", source_map)]
+    case = run_pipeline(new_case((media_dir / "fake.mp4").read_bytes()), repo, rules, media, stages)
+    assert [t.status for t in case.timings if t.stage == "source_map"] == ["ok"]
+    data = case.artifact("source_map").data
+    assert [s.get("title") for s in data["visual"]] == ["clip-a", "clip-b"]
+    assert {o["mouth_level"] for o in data["originals"]} == {"unknown"}
+
+
 def test_empty_library_or_video(media_dir, tmp_path):
     frames = _frames(media_dir / "clip-a.mp4", tmp_path)
     assert [s["clip_id"] for s in visual_map(frames, [])] == [None]

@@ -48,6 +48,23 @@ NEXT_STEPS = {
 MONEY_SENT_STEP = "You have already paid: call 1930 now to freeze the money, and tell your bank."
 
 ALTERATION_TYPES = {"not_recorded_together", "words_differ_from_original", "mouth_altered"}
+MAX_SWAP_WORDS = 6
+
+# Guided answers in plain words for the complaint text ("" = leave it out).
+CLAIMS_TO_BE = {
+    "official": "a government official",
+    "famous_expert": "a famous expert",
+    "bank_upi": "a bank or UPI service",
+    "family_friend": "a family member or friend",
+    "company_boss": "my company or boss",
+    "not_sure": "",
+}
+ASKS_FOR = {
+    "invest": "invest money",
+    "send_money": "send money",
+    "otp_link_kyc": "share an OTP, open a link or do KYC",
+    "nothing_yet": "",
+}
 
 
 def status_of(case: CaseFile) -> dict[str, Any]:
@@ -124,8 +141,14 @@ def _original(case: CaseFile) -> dict[str, Any]:
         "url": None,
         "date": None,
         "at_s": round(seg["clip_start"], 1),
+        # Only short word swaps; when the voice is from another recording the
+        # words differ wholesale, and the reasons already say so.
         "changed_words": [
-            {"original": c["original"], "fake": c["video"]} for c in changes if c["op"] == "replace"
+            {"original": c["original"], "fake": c["video"]}
+            for c in changes
+            if c["op"] == "replace"
+            and len(c["original"].split()) <= MAX_SWAP_WORDS
+            and len(c["video"].split()) <= MAX_SWAP_WORDS
         ][:5],
     }
 
@@ -174,11 +197,15 @@ def _report(case: CaseFile, verdict: Verdict, cited: list[Evidence]) -> dict[str
         f"On {case.created_at:%d %b %Y} I received a forwarded "
         f"{'video' if case.artifact('fingerprints') else 'message'} that "
         + (
-            f"claimed to be from {ctx.claims_to_be.replace('_', ' ')}"
-            if ctx.claims_to_be
+            f"claimed to be from {CLAIMS_TO_BE[ctx.claims_to_be]}"
+            if CLAIMS_TO_BE.get(ctx.claims_to_be or "")
             else "I believe is fraudulent"
         )  # fmt: skip
-        + (f" and asked me to {ctx.asks_for.replace('_', ' ')}." if ctx.asks_for else "."),
+        + (
+            f" and asked me to {ASKS_FOR[ctx.asks_for]}."
+            if ASKS_FOR.get(ctx.asks_for or "")
+            else "."
+        ),  # fmt: skip
     ]
     if ctx.money_sent:
         lines.append("I have already sent money.")

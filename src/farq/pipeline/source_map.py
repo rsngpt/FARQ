@@ -2,6 +2,7 @@
 from in the library of genuine clips; for picture matches, find the original
 and show what changed; then turn that into evidence."""
 
+import logging
 from pathlib import PurePath
 from typing import Any
 
@@ -25,6 +26,18 @@ from farq.sourcemap.visual import visual_map
 
 MAX_ORIGINALS = 2  # longest matched segments compared with their originals
 ANALYSIS_WIDTH = 640
+
+logger = logging.getLogger(__name__)
+
+
+class _NoFaces:
+    """Stand-in when MediaPipe can't start: no faces, so no mouth reading."""
+
+    name = "unavailable"
+    version = "-"
+
+    def regions(self, rgb):
+        return None
 
 
 def source_map(case: CaseFile, ctx: StageContext, embedder: Embedder | None = None) -> StageOutput:
@@ -79,7 +92,13 @@ def _find_originals(
     by_id = {str(c.id): c for c in clips}
     video = ctx.workdir / f"video{PurePath(case.media_key).suffix}"
     ctx.media.download(case.media_key, video)
-    finder = get_face_finder(s.face_model_path)
+    try:
+        finder = get_face_finder(s.face_model_path)
+    except Exception:
+        # The source map and "not recorded together" still stand without the
+        # mouth check; the mouth reading is then "unknown".
+        logger.exception("face finder unavailable; skipping the mouth check")
+        finder = _NoFaces()
 
     results = []
     for seg in matched:

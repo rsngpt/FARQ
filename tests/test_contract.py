@@ -93,7 +93,8 @@ def test_answers_shape_the_result_even_after_the_verdict(client, repo, rules, me
     after = client.get(f"/cases/{case_id}").json()
     assert after["next_steps"][0].startswith("You have already paid: call 1930 now")
     text = after["report"]["complaint_text"]
-    assert "claimed to be from official" in text and "asked me to invest" in text
+    assert "claimed to be from a government official" in text
+    assert "asked me to invest money" in text
     assert "I have already sent money." in text
 
 

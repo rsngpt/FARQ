@@ -31,6 +31,12 @@ RUN apt-get update \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
+# MediaPipe's face landmarker needs EGL/GLES libraries the slim image lacks
+# (it failed with "libEGL.so.1: cannot open shared object file").
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libegl1 libgles2 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY src ./src
 RUN uv sync --frozen --no-dev
 COPY alembic.ini ./
