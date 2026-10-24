@@ -1,0 +1,49 @@
+# FARQ verdict rules.
+#
+# Rules are checked top to bottom; the first rule whose conditions ALL hold sets
+# the verdict. Every verdict cites the evidence IDs that matched.
+#
+# Condition kinds:
+#   evidence:     at least one evidence row matching the filter must exist
+#                 (filter keys: type, source_type, min_strength, indicates, human_reviewed)
+#   distinct_source_types: N   the matching rows must come from N different
+#                 source types (model / match / list / rule), so one kind of
+#                 signal can never decide alone
+#   no_evidence:  no evidence row may match the filter
+#
+# Safety checks enforced when this file loads (the app refuses to start otherwise):
+#   - a confirmed_scam rule must require human_reviewed evidence
+#   - the last rule must be the abstain rule: no conditions, verdict not_verified
+
+rules:
+  - id: known_fake_match
+    description: The exact file matches a video a person already confirmed as a scam.
+    verdict: confirmed_scam
+    when:
+      - evidence:
+          type: known_fake_hash
+          min_strength: decisive
+          indicates: scam
+          human_reviewed: true
+
+  - id: independent_strong_signals
+    description: >
+      Strong scam signals from at least two different kinds of source, and no
+      strong evidence pointing the other way. A reviewer must check it.
+    verdict: likely_scam
+    review: true
+    when:
+      - evidence:
+          min_strength: strong
+          indicates: scam
+        distinct_source_types: 2
+      - no_evidence:
+          min_strength: strong
+          indicates: not_scam
+
+  - id: abstain
+    description: >
+      Weak, missing or conflicting evidence. Show any warning signs and the
+      official helpline. Never guess.
+    verdict: not_verified
+    when: []
