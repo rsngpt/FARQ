@@ -4,7 +4,7 @@ from io import BytesIO
 import pytest
 from conftest import ffmpeg_make, synthetic_video
 
-from farq.domain.casefile import StageStatus
+from farq.domain.casefile import StageStatus, Verdict
 from farq.pipeline.ingest import ingest
 from farq.pipeline.runner import run_pipeline
 from farq.pipeline.stages import Stage
@@ -102,6 +102,15 @@ def test_non_media_and_trap_files_fail_the_stage(run_ingest, name, content):
     assert timing.status == StageStatus.FAILED
     assert "could not read the file" in timing.error
     assert case.artifacts == []
+    # The user is told plainly that the file couldn't be opened.
+    assert "We couldn't open this file" in case.reply_text
+    assert case.decision.verdict == Verdict.NOT_VERIFIED
+
+
+def test_readable_file_keeps_the_normal_not_verified_wording(run_ingest, sample_video):
+    reply = run_ingest(sample_video).reply_text
+    assert "does not mean it is genuine" in reply
+    assert "couldn't open" not in reply
 
 
 def test_stored_file_that_changed_since_upload_fails(repo, rules, media, new_case, sample_video):

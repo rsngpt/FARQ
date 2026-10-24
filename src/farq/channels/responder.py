@@ -1,9 +1,14 @@
 """Turns a decision into the reply a user reads. Plain text for now; channel
 adapters (Telegram, WhatsApp) will add buttons and formatting on top."""
 
-from farq.domain.casefile import CaseFile, Decision, Verdict
+from farq.domain.casefile import CaseFile, Decision, StageStatus, Verdict
 
 MAX_REASONS = 4
+
+UNREADABLE = (
+    "We couldn't open this file, so we could not check it. Please forward the "
+    "original video, voice note or screenshot again."
+)
 
 HELPLINE = "call 1930 (National Cyber Crime Helpline) or report at cybercrime.gov.in"
 
@@ -30,7 +35,10 @@ def compose_reply(case: CaseFile, decision: Decision) -> str:
             "If you have already sent money: call 1930 now and tell your bank.",
             "",
         ]
-    lines += [f"Verdict: {decision.verdict.label}", HEADLINES[decision.verdict]]
+    headline = HEADLINES[decision.verdict]
+    if decision.verdict == Verdict.NOT_VERIFIED and _ingest_failed(case):
+        headline = UNREADABLE
+    lines += [f"Verdict: {decision.verdict.label}", headline]
 
     reasons = [e.reason for e in case.evidence_by_ids(decision.evidence_ids)][:MAX_REASONS]
     if reasons:
@@ -39,3 +47,7 @@ def compose_reply(case: CaseFile, decision: Decision) -> str:
 
     lines += ["", NEXT_STEPS[decision.verdict]]
     return "\n".join(lines)
+
+
+def _ingest_failed(case: CaseFile) -> bool:
+    return any(t.stage == "ingest" and t.status == StageStatus.FAILED for t in case.timings)
