@@ -9,7 +9,11 @@ so a run may skip a couple of words that differ and continue.
 import unicodedata
 from typing import Any
 
+import numpy as np
+
+from farq.embed import Embedder, unpack
 from farq.library import LibraryClip
+from farq.sourcemap.visual import with_gaps
 from farq.text import normalise
 
 SHINGLE = 5  # words per lookup
@@ -85,15 +89,30 @@ def exact_matches(query: list[dict[str, Any]], clips: list[LibraryClip]) -> list
         else:
             run["q_last"], run["l_last"] = i, j
 
-    out = []
+    spans = []  # [clip, q_first, q_end, l_first, l_end]
     for r in runs:
-        clip, lib = clips[r["clip"]], library[r["clip"]]
+        lib = library[r["clip"]]
         # Grow the run outwards past words a five-word lookup couldn't bridge.
         back = _extend(query, lib, r["q_first"], r["l_first"], -1)
-        q_first, l_first = r["q_first"] - back, r["l_first"] - back
         q_end, l_end = r["q_last"] + SHINGLE - 1, r["l_last"] + SHINGLE - 1
         forward = _extend(query, lib, q_end, l_end, +1)
-        q_end, l_end = q_end + forward, l_end + forward
+        spans.append([r["clip"], r["q_first"] - back, q_end + forward,
+                      r["l_first"] - back, l_end + forward])  # fmt: skip
+
+    # Pieces of one phrase, split by differing words, can grow into the same
+    # span; merge overlapping spans from the same clip into one.
+    merged: list[list[int]] = []
+    for span in sorted(spans):
+        last = merged[-1] if merged else None
+        if last and last[0] == span[0] and span[1] <= last[2] + 1:
+            last[2], last[4] = max(last[2], span[2]), max(last[4], span[4])
+            last[3] = min(last[3], span[3])
+        else:
+            merged.append(span)
+
+    out = []
+    for ci, q_first, q_end, l_first, l_end in merged:
+        clip, lib = clips[ci], library[ci]
         if q_end - q_first + 1 < MIN_RUN_WORDS:
             continue
         out.append(
@@ -111,3 +130,102 @@ def exact_matches(query: list[dict[str, Any]], clips: list[LibraryClip]) -> list
             }
         )
     return sorted(out, key=lambda s: s["start"])
+
+
+def phrase_windows(words: list[dict[str, Any]], size: int, stride: int) -> list[dict[str, Any]]:
+    """Overlapping windows of `size` words, every `stride` words; the last window
+    always reaches the end so no speech is left out."""
+    if not words:
+        return []
+    starts = list(range(0, max(1, len(words) - size + 1), stride))
+    if starts[-1] + size < len(words):
+        starts.append(len(words) - size)
+    return [
+        {
+            "start": words[i]["start"],
+            "end": words[min(i + size, len(words)) - 1]["end"],
+            "text": " ".join(w["w"] for w in words[i : i + size]),
+        }
+        for i in starts
+    ]
+
+
+def similar_matches(
+    query: list[dict[str, Any]],
+    clips: list[LibraryClip],
+    embedder: Embedder,
+    *,
+    covered: list[dict[str, Any]],
+    size: int,
+    stride: int,
+    min_similarity: float,
+) -> list[dict[str, Any]]:
+    """Phrases whose meaning is close to a library phrase (BGE-M3), for speech the
+    exact matcher didn't place: rewording, transcription errors, translation."""
+
+    def mostly_covered(w: dict[str, Any]) -> bool:
+        span = w["end"] - w["start"] or 1e-6
+        overlap = sum(max(0.0, min(w["end"], c["end"]) - max(w["start"], c["start"]))
+                      for c in covered)  # fmt: skip
+        return overlap / span > 0.5
+
+    windows = [w for w in phrase_windows(query, size, stride) if not mostly_covered(w)]
+    library = [(ci, p) for ci, c in enumerate(clips) for p in (c.phrases or [])]
+    if not windows or not library:
+        return []
+
+    q = embedder.embed([w["text"] for w in windows])
+    lib = np.stack([unpack(p["vec"]) for _, p in library])
+    sims = q @ lib.T
+
+    segments: list[dict[str, Any]] = []
+    for w, row in zip(windows, sims, strict=True):
+        best = int(row.argmax())
+        if row[best] < min_similarity:
+            continue
+        ci, phrase = library[best]
+        clip, sim = clips[ci], float(row[best])
+        last = segments[-1] if segments else None
+        if (last and last["clip_id"] == str(clip.id) and w["start"] <= last["end"]
+                and phrase["start"] >= last["clip_start"]):  # fmt: skip
+            last.update(end=max(last["end"], w["end"]),
+                        clip_end=max(last["clip_end"], phrase["end"]),
+                        similarity=round(max(last["similarity"], sim), 3))  # fmt: skip
+            continue
+        segments.append(
+            {
+                "start": w["start"],
+                "end": w["end"],
+                "clip_id": str(clip.id),
+                "person": clip.person,
+                "title": clip.title,
+                "clip_start": phrase["start"],
+                "clip_end": phrase["end"],
+                "method": "similar",
+                "similarity": round(sim, 3),
+                "text": w["text"],
+            }
+        )
+    return segments
+
+
+def speech_map(
+    transcript: dict[str, Any] | None,
+    clips: list[LibraryClip],
+    embedder: Embedder | None,
+    *,
+    size: int,
+    stride: int,
+    min_similarity: float,
+) -> list[dict[str, Any]]:
+    """Timeline of the speech: exact matches, then similar phrases, then
+    "no source found" for the spoken parts that matched nothing."""
+    query = words_of(transcript)
+    if not query:
+        return []
+    found = exact_matches(query, clips)
+    if embedder is not None:
+        found += similar_matches(query, clips, embedder, covered=found, size=size,
+                                 stride=stride, min_similarity=min_similarity)  # fmt: skip
+    return with_gaps(sorted(found, key=lambda s: s["start"]),
+                     start=query[0]["start"], end=query[-1]["end"])  # fmt: skip

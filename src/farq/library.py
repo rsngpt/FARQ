@@ -5,7 +5,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -19,6 +19,9 @@ from farq.settings import get_settings
 from farq.storage.media import MediaStore
 from farq.storage.tables import LibraryClipRow
 
+if TYPE_CHECKING:
+    from farq.embed import Embedder
+
 
 @dataclass(frozen=True)
 class LibraryClip:
@@ -29,6 +32,7 @@ class LibraryClip:
     duration_s: float
     fingerprints: dict[str, Any]
     transcript: dict[str, Any] | None
+    phrases: list[dict[str, Any]] | None = None  # [{"start","end","text","vec"}], BGE-M3
 
 
 def add_clip(
@@ -41,9 +45,11 @@ def add_clip(
     title: str,
     source: str,
     consent_note: str | None,
+    embedder: "Embedder | None" = None,
 ) -> tuple[UUID, bool]:
-    """Fingerprint and transcribe a genuine clip and store it. Returns
-    (clip_id, already_there); the same file is never added twice."""
+    """Fingerprint, transcribe and (with an embedder) embed the phrases of a
+    genuine clip, and store it. Returns (clip_id, already_there); the same file
+    is never added twice."""
     sha = _sha256(path)
     existing = session.scalar(select(LibraryClipRow.id).where(LibraryClipRow.sha256 == sha))
     if existing is not None:
@@ -68,6 +74,7 @@ def add_clip(
                 timeout=settings.ffmpeg_timeout_s,
             )  # fmt: skip
             transcript = asr.transcribe(wav) | {"model": f"{asr.name} {asr.version}"}
+        phrases = _embed_phrases(transcript, embedder) if embedder else None
         media_key = f"library/{clip_id}/original{path.suffix.lower()}"
         with original.open("rb") as f:
             media.put(media_key, f, "video/mp4")
@@ -84,11 +91,22 @@ def add_clip(
             duration_s=info.duration_s or 0.0,
             fingerprints=fingerprints,
             transcript=transcript,
+            phrases=phrases,
             created_at=utcnow(),
         )
     )
     session.commit()
     return clip_id, False
+
+
+def _embed_phrases(transcript: dict[str, Any] | None, embedder: "Embedder") -> list[dict]:
+    from farq.embed import pack
+    from farq.sourcemap.speech import phrase_windows, words_of
+
+    s = get_settings()
+    windows = phrase_windows(words_of(transcript), s.phrase_window_words, s.phrase_stride_words)
+    vectors = embedder.embed([w["text"] for w in windows])
+    return [w | {"vec": pack(v)} for w, v in zip(windows, vectors, strict=True)]
 
 
 def load_clips(session: Session) -> list[LibraryClip]:
@@ -102,6 +120,7 @@ def load_clips(session: Session) -> list[LibraryClip]:
             duration_s=r.duration_s,
             fingerprints=r.fingerprints,
             transcript=r.transcript,
+            phrases=r.phrases,
         )
         for r in rows
     ]

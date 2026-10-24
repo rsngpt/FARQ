@@ -82,10 +82,10 @@ def visual_map(
                 "frames": len(ts),
             }
         )
-    return _with_gaps(timeline, start=frames[0]["t"], end=frames[-1]["t"] + step)
+    return with_gaps(timeline, start=frames[0]["t"], end=frames[-1]["t"] + step)
 
 
-def _with_gaps(matched: list[dict[str, Any]], *, start: float, end: float) -> list[dict[str, Any]]:
+def with_gaps(matched: list[dict[str, Any]], *, start: float, end: float) -> list[dict[str, Any]]:
     """Insert "no source found" entries for the parts of the video that matched nothing."""
     out: list[dict[str, Any]] = []
     cursor = start

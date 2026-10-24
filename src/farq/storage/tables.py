@@ -40,6 +40,7 @@ class Base(DeclarativeBase):
     type_annotation_map = {
         dict[str, Any]: JsonType,
         list[str]: JsonType,
+        list[dict[str, Any]]: JsonType,
         datetime: UTCDateTime(),
     }
 
@@ -142,6 +143,8 @@ class LibraryClipRow(Base):
     duration_s: Mapped[float]
     fingerprints: Mapped[dict[str, Any]]  # {"fps", "frames": [{"t", "pdq", "q"}]}
     transcript: Mapped[dict[str, Any] | None]  # same shape as the transcript artifact
+    # Phrase windows with BGE-M3 embeddings: [{"start", "end", "text", "vec"}]
+    phrases: Mapped[list[dict[str, Any]] | None]
     created_at: Mapped[datetime]
 
 

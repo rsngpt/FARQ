@@ -57,6 +57,17 @@ class Settings(BaseSettings):
     whisper_gpu_compute_type: str = "int8_float16"
     whisper_beam_size: int = 5
 
+    # Speech source map. BGE-M3 (official ONNX export) at a pinned commit, kept
+    # as plain files in the shared Hugging Face volume. Phrases are windows of
+    # words; similarity at or above similar_phrase_min counts as "similar"
+    # (provisional cut-off from four test phrases, to re-check on team clips).
+    bge_m3_dir: Path = Path.home() / ".cache" / "huggingface" / "farq" / "bge-m3"
+    bge_m3_revision: str = "5617a9f61b028005a4858fdac845db406aefb181"
+    embed_threads: int = 4
+    phrase_window_words: int = 10
+    phrase_stride_words: int = 5
+    similar_phrase_min: float = 0.78
+
     # Models a worker loads at start-up, comma-separated (e.g. "whisper"), so
     # the first case doesn't wait for the load. Set on the GPU worker only.
     preload_models: str = ""

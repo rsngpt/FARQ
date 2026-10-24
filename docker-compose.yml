@@ -8,6 +8,7 @@ x-app: &app
   restart: unless-stopped
   volumes:
     - models:/home/farq/.paddlex  # downloaded model weights, shared and kept
+    - hf:/home/farq/.cache/huggingface  # BGE-M3 (downloaded once as plain files)
     - ./models:/app/models:ro  # weights we converted ourselves (scripts/convert_whisper.py)
   depends_on:
     redis:
@@ -61,7 +62,8 @@ services:
     image: farq-app-gpu
     profiles: ["gpu"]
     environment:
-      PRELOAD_MODELS: whisper  # load Whisper at start, not on the first case
+      # Load at start, not on the first case: Whisper (GPU) and BGE-M3 (CPU, 2.2 GB RAM)
+      PRELOAD_MODELS: whisper,bge
     command: celery -A farq.workers.celery_app worker -Q gpu -n gpu@%h --pool=solo --loglevel=info
     deploy:
       resources:
@@ -119,3 +121,4 @@ volumes:
   pgdata16:
   s3data:
   models:
+  hf:

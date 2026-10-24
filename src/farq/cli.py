@@ -73,12 +73,16 @@ def _library(args: argparse.Namespace) -> int:
             settings.whisper_model_dir, settings.whisper_gpu_compute_type,
             settings.whisper_beam_size,
         )  # fmt: skip
+        from farq.embed import get_embedder
+
+        embedder = get_embedder(settings.bge_m3_dir, settings.bge_m3_revision,
+                                settings.embed_threads)  # fmt: skip
         for path in args.files:
             started = time.perf_counter()
             clip_id, existed = add_clip(
                 session, media, asr, path,
                 person=args.person, title=args.title or path.stem,
-                source=args.source, consent_note=args.consent,
+                source=args.source, consent_note=args.consent, embedder=embedder,
             )  # fmt: skip
             note = (
                 "already in library"

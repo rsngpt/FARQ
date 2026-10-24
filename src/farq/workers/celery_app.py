@@ -41,16 +41,21 @@ def _log_loaded(engine: object, started: float) -> None:
 
 
 @worker_ready.connect
-def preload_whisper(**_: object) -> None:
+def preload_gpu_worker_models(**_: object) -> None:
     """GPU worker (solo pool): jobs run in this same process."""
+    s = get_settings()
     if "whisper" in _wanted():
         from farq.asr.engine import get_asr_engine
 
-        s = get_settings()
         started = time.perf_counter()
         engine = get_asr_engine(s.whisper_model_dir, s.whisper_gpu_compute_type,
                                 s.whisper_beam_size)  # fmt: skip
         _log_loaded(engine, started)
+    if "bge" in _wanted():
+        from farq.embed import get_embedder
+
+        started = time.perf_counter()
+        _log_loaded(get_embedder(s.bge_m3_dir, s.bge_m3_revision, s.embed_threads), started)
 
 
 @worker_process_init.connect

@@ -94,6 +94,37 @@ def fake_asr(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
     yield engine
 
 
+class FakeEmbedder:
+    """Stand-in for BGE-M3: a phrase's vector is the sum of fixed random vectors
+    for its words, so phrases sharing many words come out similar."""
+
+    name = "fake-embedder"
+    version = "test"
+
+    def embed(self, texts: list[str]):
+        import numpy as np
+
+        out = []
+        for text in texts:
+            v = np.zeros(256, dtype=np.float32)
+            for word in text.split():
+                seed = int(hashlib.sha256(word.encode()).hexdigest()[:8], 16)
+                v += np.random.default_rng(seed).standard_normal(256).astype(np.float32)
+            out.append(v / (np.linalg.norm(v) or 1.0))
+        return np.stack(out) if out else np.zeros((0, 256), dtype=np.float32)
+
+
+@pytest.fixture(autouse=True)
+def fake_embedder(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
+    """Tests use the stand-in embedder unless marked real_models."""
+    if request.node.get_closest_marker("real_models"):
+        yield None
+        return
+    embedder = FakeEmbedder()
+    monkeypatch.setattr("farq.pipeline.source_map.get_embedder", lambda *a: embedder)
+    yield embedder
+
+
 @pytest.fixture
 def set_setting(monkeypatch: pytest.MonkeyPatch) -> Callable[[str, str], None]:
     """Change one setting for this test (settings are cached, so clear the cache)."""

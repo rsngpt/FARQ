@@ -113,7 +113,10 @@ DEFAULT_STAGES: list[Stage] = [
     Stage("ocr", "cpu", _ocr),
     Stage("transcribe", "gpu", _transcribe),
     Stage("entities", "cpu", _entities),
-    Stage("source_map", "cpu", _source_map),
+    # On the GPU worker's queue, though BGE-M3 runs on the CPU: that worker runs
+    # one job at a time, so one copy of the 2.2 GB model is enough (two copies in
+    # the 2-process CPU worker wouldn't fit Docker's 7.6 GB).
+    Stage("source_map", "gpu", _source_map),
     Stage("verify", "io", nothing_yet, stub=True),  # official lists (RBI, NSE, SEBI)
     Stage("analyse", "gpu", nothing_yet, stub=True),  # M4: audio-visual binding, audio head
 ]
