@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: farq-whatsapp-bot
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 3000
