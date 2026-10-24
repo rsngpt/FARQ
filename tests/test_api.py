@@ -55,8 +55,11 @@ def test_raw_user_id_is_never_stored(client, session):
     assert "local-upload" not in row.user_hash
 
 
-def test_case_view_shows_reply_without_raw_details(client, repo, rules, media, queued):
-    case_id = client.post("/cases", files={"file": VIDEO}).json()["case_id"]
+def test_case_view_shows_reply_without_raw_details(
+    client, repo, rules, media, queued, sample_video
+):
+    upload = ("clip.mp4", sample_video, "video/mp4")
+    case_id = client.post("/cases", files={"file": upload}).json()["case_id"]
     assert client.get(f"/cases/{case_id}").json()["status"] == "received"
 
     run_pipeline(queued[0], repo, rules, media)
@@ -66,6 +69,8 @@ def test_case_view_shows_reply_without_raw_details(client, repo, rules, media, q
     assert "does not mean it is genuine" in view["reply_text"]
     assert [s["stage"] for s in view["stages"]][-1] == "decide"
     assert all("details" not in e for e in view["evidence"])
+    assert {a["kind"] for a in view["artifacts"]} >= {"media_info", "keyframes", "audio_16k"}
+    assert all("data" not in a for a in view["artifacts"])
 
 
 def test_unknown_case_is_404(client):
