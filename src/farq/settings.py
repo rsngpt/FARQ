@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     max_keyframes: int = 120
     ffmpeg_timeout_s: float = 120
 
+    # Frame fingerprints (PDQ) for the source map: frames per second, and a cap
+    # (longer videos are sampled more thinly).
+    fingerprint_fps: float = 2.0
+    max_fingerprint_frames: int = 600
+
     # OCR: frames read per video (spread evenly), minimum confidence kept, and
     # the long side frames are shrunk to before text detection.
     ocr_max_frames: int = 12

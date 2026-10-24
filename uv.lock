@@ -500,6 +500,7 @@ dependencies = [
     { name = "httpx" },
     { name = "paddleocr" },
     { name = "paddlepaddle" },
+    { name = "pdqhash" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
     { name = "python-multipart" },
@@ -533,6 +534,7 @@ requires-dist = [
     { name = "nvidia-cudnn-cu12", marker = "extra == 'gpu'", specifier = "==9.26.0.51" },
     { name = "paddleocr", specifier = "==3.7.0" },
     { name = "paddlepaddle", specifier = "==3.3.1" },
+    { name = "pdqhash", specifier = "==0.2.8" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pydantic-settings", specifier = ">=2.6" },
     { name = "python-multipart", specifier = ">=0.0.18" },
@@ -1156,6 +1158,16 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/92/72/d235f82b51a22478938a3583b68e8dc05811937543adf410f34bab76004a/pandas-3.1.0-cp312-cp312-pyemscripten_2024_0_wasm32.whl", hash = "sha256:ac2f833557874a79fc0b5fac4c86e402ea6498beba8753dc29ca23d08481689a", size = 8091628, upload-time = "2026-10-22T11:55:21.285Z" },
     { url = "https://files.pythonhosted.org/packages/10/72/06aefff8fe5efc5e1ca8bfb2695b648a435358f6dc224d4e40159314181a/pandas-3.1.0-cp312-cp312-win_amd64.whl", hash = "sha256:b8c75dbb27c7d170b25c13dd35515da4bb92d40fe8bb3bd2c69a95de2218889b", size = 10748836, upload-time = "2026-10-22T11:55:23.47Z" },
     { url = "https://files.pythonhosted.org/packages/f6/b6/4c86f659f5b14790d14e17253becc93c4e3d1511b73f0ba2184f06b164f8/pandas-3.1.0-cp312-cp312-win_arm64.whl", hash = "sha256:73b6cea22090b7123c78ee662a5108ff36616b0bec4fe47026f86fb04a49bce7", size = 10128898, upload-time = "2026-10-22T11:55:25.995Z" },
+]
+
+[[package]]
+name = "pdqhash"
+version = "0.2.8"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/98/83/258f070fbe134c2bd6f20dc0a9b142842ff35bc1369a98e7df30b496177b/pdqhash-0.2.8.tar.gz", hash = "sha256:eb9a9de36745937ce3e481a02ce933fe907c84e0b1748c9dfea52c12ca5c1e35", size = 696702, upload-time = "2025-05-28T23:07:13.694Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/76/8411975e8d0b5b4d7aeeedfff55101074c96d7b842377e9eb2f02181f0ea/pdqhash-0.2.8-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:13f106595b566677b0a125d96c6910fd1f1bbf2e86aae3a36ca8e0ed67ded02c", size = 108491, upload-time = "2025-05-28T23:07:06.778Z" },
+    { url = "https://files.pythonhosted.org/packages/28/e9/80bd1f68066f6ce4ae06cfdc48fe4ca454d6868b16de878cdb8fed434b04/pdqhash-0.2.8-cp312-cp312-win_amd64.whl", hash = "sha256:fe082d83432583eaf7938fade50ec14e2ecc597b648dbca3419703b7a36f07f0", size = 43371, upload-time = "2025-05-28T23:07:07.678Z" },
 ]
 
 [[package]]

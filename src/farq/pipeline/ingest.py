@@ -8,6 +8,7 @@ from pathlib import Path, PurePath
 from farq.domain.casefile import Artifact, CaseFile
 from farq.media import ffmpeg
 from farq.media.ffmpeg import MediaError
+from farq.media.fingerprints import fingerprint_video
 from farq.pipeline.stages import StageContext, StageOutput
 from farq.settings import get_settings
 
@@ -39,6 +40,15 @@ def ingest(case: CaseFile, ctx: StageContext) -> StageOutput:
             timeout=timeout,
         )
         artifacts.append(_keyframes(case, ctx, fps, frames, tool))
+        artifacts.append(
+            Artifact(
+                stage="ingest",
+                kind="fingerprints",
+                data=fingerprint_video(original, ctx.workdir, info.duration_s),
+                model_name="pdqhash",
+                model_version=_pdqhash_version(),
+            )
+        )
     elif info.kind == "image":
         still = ctx.workdir / "00001.jpg"
         ffmpeg.extract_image(original, still, timeout)
@@ -76,6 +86,12 @@ def _keyframes(
             ctx.media.put(key, f, "image/jpeg")
         stored.append({"t": round(t, 3), "key": key})
     return Artifact(stage="ingest", kind="keyframes", data={"fps": fps, "frames": stored}, **tool)
+
+
+def _pdqhash_version() -> str:
+    from importlib.metadata import version
+
+    return version("pdqhash")
 
 
 def _sha256(path: Path) -> str:

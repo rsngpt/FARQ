@@ -137,11 +137,12 @@ def extract_frames(
     max_frames: int,
     max_seconds: float,
     timeout: float,
+    target_fps: float = 1.0,
 ) -> tuple[float, list[tuple[float, Path]]]:
-    """One frame per second, or fewer for long videos so at most max_frames
-    come out, spread evenly. Returns (fps used, [(timestamp_s, jpg path)])."""
+    """target_fps frames per second, or fewer for long videos so at most
+    max_frames come out, spread evenly. Returns (fps used, [(timestamp_s, jpg)])."""
     span = min(duration_s or max_seconds, max_seconds)
-    fps = 1.0 if span <= max_frames else max_frames / span
+    fps = target_fps if span * target_fps <= max_frames else max_frames / span
     out = _run(
         ["ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "info", *INPUT_GUARDS,
          "-i", str(path), "-t", str(max_seconds),

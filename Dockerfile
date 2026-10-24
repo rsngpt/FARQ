@@ -20,9 +20,16 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Dependencies first, so code edits don't reinstall them.
+# Dependencies first, so code edits don't reinstall them. pdqhash is published
+# as source only, so a C++ compiler is installed for this step and removed in
+# the same step (so it doesn't stay in the image).
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && uv sync --frozen --no-dev --no-install-project \
+    && apt-get purge -y build-essential \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY src ./src
 RUN uv sync --frozen --no-dev

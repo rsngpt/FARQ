@@ -126,6 +126,25 @@ class AuditRow(Base):
     details: Mapped[dict[str, Any]]
 
 
+class LibraryClipRow(Base):
+    """A genuine recording of a person, for the source map. Who it shows, where it
+    came from and the consent note are kept with it."""
+
+    __tablename__ = "library_clips"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    person: Mapped[str] = mapped_column(String(128), index=True)
+    title: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(Text)  # e.g. "team recording, 24 Oct" or a URL
+    consent_note: Mapped[str | None] = mapped_column(Text)
+    media_key: Mapped[str] = mapped_column(String(255))
+    sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    duration_s: Mapped[float]
+    fingerprints: Mapped[dict[str, Any]]  # {"fps", "frames": [{"t", "pdq", "q"}]}
+    transcript: Mapped[dict[str, Any] | None]  # same shape as the transcript artifact
+    created_at: Mapped[datetime]
+
+
 class KnownFakeRow(Base):
     """Files a person has confirmed as scams (reviewer or a public fact-check)."""
 
