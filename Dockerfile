@@ -17,6 +17,9 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 COPY src ./src
 RUN uv sync --frozen --no-dev
+COPY alembic.ini ./
+COPY migrations ./migrations
+COPY config ./config
 
 # Don't run as root inside the container.
 RUN useradd --create-home --uid 1000 farq
