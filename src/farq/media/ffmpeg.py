@@ -11,7 +11,10 @@ import subprocess
 from dataclasses import asdict, dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import numpy as np
 
 # Demuxers we accept. "mov" covers mp4/m4a/3gp, "matroska" covers webm.
 ALLOWED_FORMATS = "mov,matroska,ogg,mp3,wav,aac,image2,jpeg_pipe,png_pipe,webp_pipe"
@@ -159,6 +162,36 @@ def extract_frames(
     if len(times) < len(files):
         raise MediaError(f"frame timestamps ({len(times)}) don't match frames ({len(files)})")
     return fps, list(zip(times[: len(files)], files, strict=True))
+
+
+def read_frames(
+    path: Path,
+    *,
+    start: float,
+    duration: float,
+    fps: float,
+    size: tuple[int, int],
+    timeout: float,
+) -> "np.ndarray":
+    """Frames from `start` for `duration` seconds at `fps`, scaled to `size`
+    (width, height), as an (n, height, width, 3) uint8 RGB array in memory."""
+    import numpy as np
+
+    width, height = size
+    out = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error", *INPUT_GUARDS,
+         "-ss", f"{max(start, 0):.3f}", "-i", str(path), "-t", f"{duration:.3f}",
+         "-vf", f"fps={fps},scale={width}:{height}", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+        capture_output=True, timeout=timeout, check=False,
+    )  # fmt: skip
+    if out.returncode != 0:
+        last = out.stderr.decode("utf-8", "replace").strip().splitlines()[-1:] or ["no details"]
+        raise MediaError(f"ffmpeg could not read frames: {last[0]}")
+    frame_bytes = width * height * 3
+    count = len(out.stdout) // frame_bytes
+    return np.frombuffer(out.stdout[: count * frame_bytes], dtype=np.uint8).reshape(
+        count, height, width, 3
+    )
 
 
 def extract_image(path: Path, out_path: Path, timeout: float) -> None:

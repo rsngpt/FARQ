@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     phrase_stride_words: int = 5
     similar_phrase_min: float = 0.78
 
+    # Find-the-original: MediaPipe's face model, kept in the shared volume.
+    face_model_path: Path = Path.home() / ".cache" / "huggingface" / "farq" / "face_landmarker.task"
+
     # Models a worker loads at start-up, comma-separated (e.g. "whisper"), so
     # the first case doesn't wait for the load. Set on the GPU worker only.
     preload_models: str = ""
