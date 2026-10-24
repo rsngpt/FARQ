@@ -52,8 +52,18 @@ Code freeze: PENDING. Rehearsal: PENDING.
 - [x] M2.3 OCR: PaddleOCR, up to 12 frames, Hindi + English, merged lines with times
 - [x] M2.4 Whisper large-v3-turbo (weights converted by us from OpenAI's), word timings
       (verified on laptop GPU and in the GPU container; live stack not yet rebuilt)
-- [ ] M2.5 Entities (numbers, UPI IDs, links, return promises) + weak rule evidence
-- [ ] M2.6 Timing run on a 1-minute clip vs the 60 s target
+- [x] M2.5 Entities (numbers, UPI IDs, links, group links) + weak warning signs
+      (guaranteed returns, group invite, urgency, UPI ID to pay into)
+- [x] M2.6 Timing run on a 1-minute clip vs the 60 s target
+- [ ] M2 leftover: vpdq near-duplicate known-fake hash (moved to M3 with the source map)
+- [ ] Speed-up option: run OCR and Whisper side by side (they don't depend on each other)
+
+M2.6 timing run (24 Oct, live stack on the laptop, 60.5 s synthetic video:
+two overlay frames + the team's pitch and control recordings). Server time from
+upload to verdict (/metrics/latency): 45.9 s for the first case after start,
+38.7 s after. Per stage, first case: ingest 4.2 s, OCR 23.9 s, Whisper 14.4 s,
+everything else < 0.1 s. Verify and analyse are still stubs (M3/M4), so this
+is not the final number.
 
 Measured so far (container, synthetic 47 s video with overlays and a team
 recording): ingest 2.4 s, OCR 23 s for 12 frames. Whisper in the GPU
@@ -114,8 +124,8 @@ audio back in, coupling snaps into step.
 | 1 | PaddlePaddle 3.3.1 crashes with oneDNN on OCR models (Windows and Linux) | - | worked around: oneDNN off |
 | 2 | OCR on Windows laptop is slow (~2 min for the real-model test incl. download); container is fine | - | not needed for production |
 | 3 | faster-whisper 1.2.1 breaks with current PyAV (`metadata_errors`) | - | worked around: pass samples, not a path |
-| 4 | Whisper model load takes 68.6 s from the Windows bind mount | - | open: warm at worker start or use a volume |
-| 5 | Docker images + build cache filled C: (1.1 GB free); GPU image reported 13 GB | - | caches cleared (4.0 GB free); Docker disk needs compacting; GPU image to slim |
+| 4 | Whisper model load takes 40-68 s from the Windows bind mount | - | fixed: preloaded at worker start (OCR too) |
+| 5 | Docker images + build cache filled C: (1.1 GB free); GPU image reported 13 GB | - | caches cleared; images slimmed (app 3.3 GB, GPU 7.1 GB, as Docker reports); Docker disk file still 35 GB until compacted |
 
 ## Decisions
 - Product and code name: FARQ. Repo folder: RAKSHAM.
