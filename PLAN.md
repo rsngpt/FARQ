@@ -50,12 +50,17 @@ Code freeze: PENDING. Rehearsal: PENDING.
 - [x] M2.2 Ingest: guarded ffprobe, keyframes (1/s, max 120), 16 kHz mono audio
 - [x] M2 follow-up: plain "couldn't open this file" reply
 - [x] M2.3 OCR: PaddleOCR, up to 12 frames, Hindi + English, merged lines with times
-- [ ] M2.4 Whisper large-v3-turbo (weights converted by us from OpenAI's), word timings
+- [x] M2.4 Whisper large-v3-turbo (weights converted by us from OpenAI's), word timings
+      (verified on laptop GPU and in the GPU container; live stack not yet rebuilt)
 - [ ] M2.5 Entities (numbers, UPI IDs, links, return promises) + weak rule evidence
 - [ ] M2.6 Timing run on a 1-minute clip vs the 60 s target
 
 Measured so far (container, synthetic 47 s video with overlays and a team
-recording): ingest 2.4 s, OCR 23 s for 12 frames. Not yet measured: Whisper.
+recording): ingest 2.4 s, OCR 23 s for 12 frames. Whisper in the GPU
+container: 9.9 s for the 47 s team pitch (model load 68.6 s from the Windows
+bind mount, once per worker start). Spoken phone number lost one digit
+(987654320); spoken UPI ID comes out in Devanagari, so OCR stays the main
+source for exact IDs.
 
 ## Rules every stage follows
 - Evidence rows carry: id, source_type (model / match / list / rule), strength
@@ -108,6 +113,9 @@ audio back in, coupling snaps into step.
 |---|---|---|---|
 | 1 | PaddlePaddle 3.3.1 crashes with oneDNN on OCR models (Windows and Linux) | - | worked around: oneDNN off |
 | 2 | OCR on Windows laptop is slow (~2 min for the real-model test incl. download); container is fine | - | not needed for production |
+| 3 | faster-whisper 1.2.1 breaks with current PyAV (`metadata_errors`) | - | worked around: pass samples, not a path |
+| 4 | Whisper model load takes 68.6 s from the Windows bind mount | - | open: warm at worker start or use a volume |
+| 5 | Docker images + build cache filled C: (1.1 GB free); GPU image reported 13 GB | - | caches cleared (4.0 GB free); Docker disk needs compacting; GPU image to slim |
 
 ## Decisions
 - Product and code name: FARQ. Repo folder: RAKSHAM.
