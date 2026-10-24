@@ -59,13 +59,13 @@ services:
       retries: 10
 
   postgres:
-    image: pgvector/pgvector:0.8.1-pg17
+    image: pgvector/pgvector:0.8.1-pg16
     restart: unless-stopped
     env_file: .env
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata16:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -92,5 +92,5 @@ services:
       retries: 10
 
 volumes:
-  pgdata:
+  pgdata16:
   s3data:

@@ -1,30 +1,94 @@
 # FARQ plan
 
+FARQ checks a forwarded video against its **sources** instead of only guessing
+from pixels. Indian investment deepfakes are collages: real faces, voices taken
+from other real videos, AI only on the lips. FARQ answers four questions, then an
+investigator agent writes a sourced report.
+
+1. **Source map:** where did every second come from (visual: vpdq vs official
+   footage; speech: Whisper + BGE-M3 / exact n-grams vs real speeches)?
+2. **Find the original + diff:** align in time, mouth-vs-rest-of-face change
+   (MediaPipe), transcript diff.
+3. **Audio-visual binding** (main detector, no original needed): pitch/loudness
+   emphasis vs head pose + eyebrows, mouth ignored; windowed cross-correlation
+   at +-300 ms. v1 heuristic calibrated per person; v2 small temporal-conv head
+   on frozen WavLM Base+ + landmarks. Knockout test with the original audio.
+4. **Supporting signals:** audio deepfake head (frozen WavLM / XLS-R), known-fake
+   hash (sha256 + vpdq), scam-script match (BGE-M3), official lists (RBI Alert
+   List, NSE caution notices, SEBI), numbers / UPI IDs / links (OCR first, then speech).
+
 ## Owners
 | Area | Owner |
 |---|---|
 | Lead, design, integration | PENDING |
-| Channels (Telegram, WhatsApp) | PENDING |
-| Pipeline and decision engine | PENDING |
-| Detectors (audio, video) | PENDING |
-| Demo and slides | PENDING |
+| Intake, channels, reviewer | PENDING |
+| Source map + find-original | PENDING |
+| Audio-visual binding + audio head | PENDING |
+| Rules, investigator agent, reports | PENDING |
+| Test set, metrics, demo | PENDING |
 
-## Timeline
-| When | What |
-|---|---|
-| Day 1 | Scaffold, Telegram end to end, CaseFile + Evidence, decision engine, detector interface, ingest |
-| Day 1 evening | PENDING |
-| Day 2 | PENDING |
-| Code freeze | PENDING |
-| Rehearsal | PENDING |
+## Milestones
+| # | What | Status |
+|---|---|---|
+| M1 | Intake + CaseFile + round trip (Telegram deferred; local upload first) | in progress |
+| M2 | Ingest + OCR + Whisper + entities + known-fake hash | |
+| M3 | Source map + find-original diff | |
+| M4 | Audio-visual binding v1 + audio deepfake head | |
+| M5 | Rules engine + investigator report + reviewer + police report | |
+| M6 | Test set run (metrics) + demo polish | |
+
+Code freeze: PENDING. Rehearsal: PENDING.
 
 ## Build steps
-- [x] 1. Repo structure and plan agreed
-- [x] 2. Scaffold: uv, ruff, pytest, Dockerfile, docker-compose, .env.example
-- [ ] 3. Telegram adapter: receive a video, store it, reply "Got it, checking"
-- [ ] 4. CaseFile + Evidence, pipeline with stub stages, decision engine, verdict reply
-- [ ] 5. Detector plugin interface + one dummy detector
-- [ ] 6. Ingest stage: ffprobe, sha256, keyframes, 16 kHz mono audio
+- [x] Repo structure and plan agreed
+- [x] Scaffold: uv, ruff, pytest, Dockerfile, docker-compose, .env.example
+- [ ] Telegram adapter (deferred for now)
+
+## Rules every stage follows
+- Evidence rows carry: id, source_type (model / match / list / rule), strength
+  (decisive / strong / weak), reason, model_name + model_version, timestamp.
+- ML signals are shown as levels (low / medium / high), calibrated as a
+  percentile against the person's genuine clips. Never raw scores.
+- Abstain: weak or conflicting evidence gives NOT VERIFIED with warning signs and
+  the official helpline. Never guess. Never call a video "genuine".
+- The verdict comes from the YAML rules engine, never the LLM. The agent only
+  writes the narrative, and every sentence cites an evidence ID.
+- CONFIRMED only after a reviewer confirms; confirmed cases are cached.
+- Audit log: every verdict and reviewer action stores who, when, evidence IDs,
+  model versions.
+- Stages are idempotent; intake dedupes on message ID.
+- Stage start/end times recorded in the CaseFile; /metrics/latency for the demo
+  panel. Targets: known fake < 10 s, new video < 60 s.
+- Only the API is public; everything else binds to localhost.
+
+## Outputs
+- Chat reply: verdict, 2-4 plain reasons, next steps; source map + "what changed"
+  as text and a timeline image when available.
+- Police-portal report: pre-filled complaint text + evidence PDF (WeasyPrint)
+  with SHA-256 hashes and timestamps, for the USER to file on cybercrime.gov.in.
+  Money lost: "call 1930 now" first. Never auto-submitted.
+- Reviewer: LIKELY cases go to a reviewer (Telegram, Confirm / Reject).
+  Queue order: money already sent > frequently forwarded > other.
+- Campaigns: cases sharing a known-fake hash, source clip or scam-script match
+  are grouped, with first-seen time, count and timeline.
+
+## Out of scope (do not build)
+Circle, name checks (CNAP / UPI / SEBI @valid), institution "never says" records,
+outbreak alerts, own number-reputation database, Android app, voice-note replies,
+warning cards, physics / room-acoustics checks, watermarking.
+Live-call help: only if time remains, as a simple text flow.
+
+## Data
+Public official videos + speech transcripts, public debunked scam videos,
+team-recorded consented clips (enrolled team members). Test fakes made on-site
+from team clips only. No real PII; phone numbers stored only as keyed hashes.
+
+## Demo
+An enrolled team member; a fresh stitched fake made from one of her clips. A
+generic detector says "likely real" (detector: PENDING, must be a real run).
+FARQ: "Altered. Face and voice are both hers but weren't recorded together."
+Source map, original, changed words, coupling chart, then the knockout: original
+audio back in, coupling snaps into step.
 
 ## Bugs
 | # | Bug | Owner | Fixed |
@@ -33,10 +97,15 @@
 ## Decisions
 - Product and code name: FARQ. Repo folder: RAKSHAM.
 - Python 3.12 managed by uv; all services run in Docker (WSL2 backend on Windows).
-- Celery + Redis now, not Temporal (less setup; stages stay plain functions so a swap is cheap).
-- Queues: io, cpu, gpu. The GPU worker runs one job at a time (6 GB VRAM).
-- GPU worker is behind a compose profile so teammates without NVIDIA GPUs can still run the stack.
-- All ports bound to 127.0.0.1.
-- Media store: SeaweedFS 4.46 (S3-compatible) instead of MinIO, whose images were removed from Docker Hub. Code uses only the S3 API, so it can be swapped.
-- Telegram uses long polling locally (nothing exposed to the internet); webhook route built for deployment.
-- Users see reasons and a level (low / medium / high), never raw scores.
+- Celery + Redis; queues io, cpu, gpu. GPU worker runs one job at a time (6 GB VRAM)
+  and sits behind a compose profile so teammates without NVIDIA GPUs can run the stack.
+- Postgres 16 + pgvector.
+- Media store: SeaweedFS 4.46 (S3-compatible) instead of MinIO, whose images were
+  removed from Docker Hub. Code uses only the S3 API, so it can be swapped.
+- Whisper large-v3-turbo via faster-whisper int8; frozen WavLM Base+ / CLIP as
+  feature extractors; never two large models loaded at once.
+- LLM: Claude on Amazon Bedrock (India profile), tool use, narrative only.
+- Channels: WhatsApp (pywa) + Telegram (python-telegram-bot). Telegram deferred;
+  a local upload endpoint is the first intake.
+- Telegram uses long polling locally; WhatsApp webhooks will need a public URL
+  for the API only (Caddy or Cloudflare Tunnel: PENDING).
