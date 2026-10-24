@@ -1,5 +1,6 @@
-"""Entities stage: collect phone numbers, UPI IDs and links (for list checks in
-M3 and the police report), and turn scam-pitch markers into weak evidence.
+"""Entities stage: collect phone numbers, UPI IDs and links (the scammer's side,
+for the reply and the police report), and turn scam-pitch markers into weak
+evidence.
 
 On-screen text is checked first and trusted more: speech-to-text can drop a
 digit from a spoken number, so entities heard in speech are marked "medium".
@@ -41,7 +42,7 @@ def entities(case: CaseFile, ctx: StageContext) -> StageOutput:
 
     for entry in found.values():
         sources = {s["source"] for s in entry["sources"]}
-        entry["confidence"] = "high" if "screen" in sources else CONFIDENCE["speech"]
+        entry["confidence"] = "high" if sources & {"screen", "message"} else CONFIDENCE["speech"]
 
     evidence = [_marker_evidence(m) for m in markers.values()]
     upi_ids = [e for e in found.values() if e["kind"] == "upi_id"]
@@ -68,6 +69,8 @@ Passage = tuple[str, float, str, list[dict[str, Any]]]  # source, time, text, wo
 
 def _passages(case: CaseFile) -> list[Passage]:
     passages: list[Passage] = []
+    if (message := case.artifact("message")) is not None:  # a text claim
+        passages.append(("message", 0.0, message.data["text"], []))
     if (ocr := case.artifact("ocr")) is not None:
         passages += [("screen", line["first_t"], line["text"], []) for line in ocr.data["lines"]]
     if (transcript := case.artifact("transcript")) is not None:
@@ -92,14 +95,18 @@ def _time_at(start: float, words: list[dict[str, Any]], char_pos: int) -> float:
 
 def _marker_evidence(marker: dict[str, Any]) -> Evidence:
     first = min(marker["examples"], key=lambda e: e["t"])
-    where = "on screen" if first["source"] == "screen" else "in what is said"
+    where = {
+        "screen": f"on screen at {_clock(first['t'])}",
+        "speech": f"in what is said at {_clock(first['t'])}",
+        "message": "in the message",
+    }[first["source"]]
     return Evidence(
         stage="entities",
         type=f"pitch_{marker['kind']}",
         source_type=SourceType.RULE,
         strength=Strength.WEAK,  # a warning sign; never decides on its own
         indicates=Indicates.SCAM,
-        reason=f"{MARKER_REASONS[marker['kind']]} ({where} at {_clock(first['t'])})",
+        reason=f"{MARKER_REASONS[marker['kind']]} ({where})",
         details=marker,
     )
 

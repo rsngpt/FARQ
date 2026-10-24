@@ -131,11 +131,22 @@ class CaseStatus(StrEnum):
 
 
 class CaseContext(BaseModel):
-    """Answers from the guided conversation (fixed buttons)."""
+    """Answers from the guided conversation (fixed buttons) and what the
+    WhatsApp bot tells us about the message."""
 
     claimed_person: str | None = None
     claimed_ask: str | None = None
     money_sent: bool | None = None
+    # Guided answers, as Roshan's bot sends them:
+    # official | famous_expert | bank_upi | family_friend | company_boss | not_sure
+    claims_to_be: str | None = None
+    # invest | send_money | otp_link_kyc | nothing_yet
+    asks_for: str | None = None
+    caption: str | None = None
+    is_forwarded: bool | None = None
+    frequently_forwarded: bool | None = None
+    language: str | None = None
+    received_at: str | None = None
 
 
 class CaseFile(BaseModel):

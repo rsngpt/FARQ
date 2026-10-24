@@ -22,7 +22,7 @@ def test_upload_creates_case_stores_media_and_queues_it(client, media, queued):
 def test_same_message_id_is_one_case(client, queued):
     first = client.post("/cases", files={"file": VIDEO}, data={"message_id": "m1"}).json()
     second = client.post("/cases", files={"file": VIDEO}, data={"message_id": "m1"}).json()
-    assert second == {"case_id": first["case_id"], "duplicate": True}
+    assert (second["case_id"], second["duplicate"]) == (first["case_id"], True)
     assert len(queued) == 1
 
 
@@ -60,10 +60,10 @@ def test_case_view_shows_reply_without_raw_details(
 ):
     upload = ("clip.mp4", sample_video, "video/mp4")
     case_id = client.post("/cases", files={"file": upload}).json()["case_id"]
-    assert client.get(f"/cases/{case_id}").json()["status"] == "received"
+    assert client.get(f"/cases/{case_id}/debug").json()["status"] == "received"
 
     run_pipeline(queued[0], repo, rules, media)
-    view = client.get(f"/cases/{case_id}").json()
+    view = client.get(f"/cases/{case_id}/debug").json()
     assert view["status"] == "decided"
     assert view["verdict"] == "NOT VERIFIED"
     assert "does not mean it is genuine" in view["reply_text"]

@@ -126,6 +126,9 @@ class CaseRepository:
             reply_text=row.reply_text,
         )
 
+    def update_context(self, case_id: UUID, context: CaseContext) -> None:
+        self.session.get_one(CaseRow, case_id).context = context.model_dump(mode="json")
+
     def set_status(self, case_id: UUID, status: CaseStatus) -> None:
         self.session.get_one(CaseRow, case_id).status = status
 

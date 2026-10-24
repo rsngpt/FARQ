@@ -21,6 +21,12 @@ def ingest(case: CaseFile, ctx: StageContext) -> StageOutput:
     if _sha256(original) != case.media_sha256:
         raise MediaError("the stored file doesn't match the fingerprint taken at upload")
 
+    if original.suffix == ".txt":  # a text claim: nothing for FFmpeg to do
+        text = original.read_text(encoding="utf-8", errors="replace")[:5000]
+        return StageOutput(
+            artifacts=[Artifact(stage="ingest", kind="message", data={"text": text})]
+        )
+
     info = ffmpeg.probe(original, timeout)
     tool = {"model_name": "ffmpeg", "model_version": ffmpeg.version()}
     media_info = info.as_dict()

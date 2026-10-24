@@ -14,8 +14,11 @@ from farq.text import normalise
 # allowing spaces or hyphens between digits ("98765 43210").
 PHONE = re.compile(r"(?<![\d+])(?:\+?91[\s-]?|0)?([6-9](?:[\s-]?\d){9})(?!\d)")
 
-# UPI IDs: name@handle, where the handle has no dot (that would be an email).
-UPI = re.compile(r"(?<![\w.@-])([a-z0-9][a-z0-9._-]{1,63})@([a-z][a-z0-9]{1,31})\b(?![.@])", re.I)
+# UPI IDs: name@handle, where the handle has no dot followed by more letters
+# (that would be an email); a sentence-ending full stop is fine.
+UPI = re.compile(
+    r"(?<![\w.@-])([a-z0-9][a-z0-9._-]{1,63})@([a-z][a-z0-9]{1,31})\b(?!@)(?!\.\w)", re.I
+)
 
 # Links: with a scheme, or a bare domain on a common top-level domain.
 LINK = re.compile(

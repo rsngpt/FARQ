@@ -122,7 +122,7 @@ def _check(args: argparse.Namespace) -> int:
 
         deadline = time.monotonic() + args.timeout
         while True:
-            view = client.get(f"/cases/{case_id}").json()
+            view = client.get(f"/cases/{case_id}/debug").json()
             if view["status"] in ("decided", "failed"):
                 break
             if time.monotonic() > deadline:

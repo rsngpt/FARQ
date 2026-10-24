@@ -24,6 +24,8 @@ ALLOWED_EXTENSIONS = {
     ".ogg", ".opus", ".mp3", ".m4a", ".wav", ".aac",
     # screenshots
     ".jpg", ".jpeg", ".png", ".webp",
+    # text claims (the bot's JSON text messages are stored as message.txt)
+    ".txt",
 }  # fmt: skip
 
 CHUNK = 1024 * 1024

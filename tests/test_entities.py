@@ -61,6 +61,12 @@ def test_phone_upi_and_link_patterns():
 
 def test_emails_and_short_numbers_are_not_entities():
     assert find_entities("write to help@example.com") == []  # not a UPI ID, not a link
+    assert find_entities("write to help@example.com.") == []
+
+
+def test_upi_id_at_the_end_of_a_sentence():
+    found = [(f.kind, f.value) for f in find_entities("Pay to UPI farqdemo@okfakebank.")]
+    assert found == [("upi_id", "farqdemo@okfakebank")]
     assert find_entities("987654320") == []  # 9 digits: the spoken number Whisper cut short
     assert find_entities("call 12345 67890") == []  # Indian mobiles start 6-9
 
