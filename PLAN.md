@@ -1,9 +1,21 @@
 # FARQ plan
 
+## LOCKED SCOPE (24 Oct): finish end to end, then a working demo
+
+USP: (1) WhatsApp, for ease of access; (2) checks from the scammer's side
+(numbers, UPI IDs, links in the video); (3) deepfake checking in 3 layers;
+(4) survives WhatsApp's re-compression.
+
+Build only, in order: close M3 -> WhatsApp (webhook, media in, verdict out,
+guided buttons) -> police report -> end-to-end rehearsal from a phone + runbook.
+Detection accuracy work starts after the demo.
+
+DROPPED from the project: Telegram, reviewer flow, AI-written report,
+campaigns, timeline image, official-list checks (RBI/NSE/SEBI).
+
 FARQ checks a forwarded video against its **sources** instead of only guessing
 from pixels. Indian investment deepfakes are collages: real faces, voices taken
-from other real videos, AI only on the lips. FARQ answers four questions, then an
-investigator agent writes a sourced report.
+from other real videos, AI only on the lips.
 
 1. **Source map:** where did every second come from (visual: vpdq vs official
    footage; speech: Whisper + BGE-M3 / exact n-grams vs real speeches)?
@@ -90,15 +102,12 @@ source for exact IDs.
 - Only the API is public; everything else binds to localhost.
 
 ## Outputs
-- Chat reply: verdict, 2-4 plain reasons, next steps; source map + "what changed"
-  as text and a timeline image when available.
+- WhatsApp reply: verdict, 2-4 plain reasons, next steps; source map and
+  "what changed" as text. Guided buttons: who it claims to be / what it asks
+  for / money already sent (if yes, 1930 first).
 - Police-portal report: pre-filled complaint text + evidence PDF (WeasyPrint)
   with SHA-256 hashes and timestamps, for the USER to file on cybercrime.gov.in.
-  Money lost: "call 1930 now" first. Never auto-submitted.
-- Reviewer: LIKELY cases go to a reviewer (Telegram, Confirm / Reject).
-  Queue order: money already sent > frequently forwarded > other.
-- Campaigns: cases sharing a known-fake hash, source clip or scam-script match
-  are grouped, with first-seen time, count and timeline.
+  Never auto-submitted.
 
 ## Out of scope (do not build)
 Circle, name checks (CNAP / UPI / SEBI @valid), institution "never says" records,
