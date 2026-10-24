@@ -6,7 +6,12 @@ settings = get_settings()
 
 # Three queues: io (network, storage), cpu (OCR, ffmpeg), gpu (model inference).
 # Each worker container listens to one queue; see docker-compose.yml.
-app = Celery("farq", broker=settings.redis_url, backend=settings.redis_url)
+app = Celery(
+    "farq",
+    broker=settings.redis_url,
+    backend=settings.redis_url,
+    include=["farq.workers.tasks"],
+)
 app.conf.update(
     task_default_queue="io",
     # Take one job at a time and acknowledge it only when done, so a crashed

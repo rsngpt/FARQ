@@ -42,7 +42,11 @@ Code freeze: PENDING. Rehearsal: PENDING.
 ## Build steps
 - [x] Repo structure and plan agreed
 - [x] Scaffold: uv, ruff, pytest, Dockerfile, docker-compose, .env.example
+- [x] M1 core: CaseFile + Evidence, Postgres tables + Alembic, upload intake
+      (`POST /cases`, `farq check`), pipeline runner (stub stages + real
+      known-fake sha256 lookup), YAML rules engine, audit log, /metrics/latency
 - [ ] Telegram adapter (deferred for now)
+- [ ] Split stages across io / cpu / gpu queues (today the whole pipeline runs as one io task)
 
 ## Rules every stage follows
 - Evidence rows carry: id, source_type (model / match / list / rule), strength
@@ -107,5 +111,7 @@ audio back in, coupling snaps into step.
 - LLM: Claude on Amazon Bedrock (India profile), tool use, narrative only.
 - Channels: WhatsApp (pywa) + Telegram (python-telegram-bot). Telegram deferred;
   a local upload endpoint is the first intake.
+- Local tools connect to 127.0.0.1, not "localhost" (on Windows, localhost tries IPv6 first and hangs).
+- Upload endpoint and case view need an X-API-Key; /healthz and /metrics/latency are open (no personal data).
 - Telegram uses long polling locally; WhatsApp webhooks will need a public URL
   for the API only (Caddy or Cloudflare Tunnel: PENDING).
