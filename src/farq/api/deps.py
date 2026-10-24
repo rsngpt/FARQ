@@ -30,9 +30,9 @@ def get_media_store() -> MediaStore:
 
 
 def get_enqueue() -> Enqueue:
-    from farq.workers.tasks import run_case
+    from farq.workers.tasks import enqueue_case
 
-    return lambda case_id: run_case.apply_async(args=[str(case_id)], queue="io")
+    return enqueue_case
 
 
 def require_api_key(

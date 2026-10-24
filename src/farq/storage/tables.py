@@ -82,9 +82,23 @@ class EvidenceRow(Base):
     created_at: Mapped[datetime]
 
 
+class ArtifactRow(Base):
+    __tablename__ = "artifacts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    case_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cases.id"), index=True)
+    stage: Mapped[str] = mapped_column(String(32))
+    kind: Mapped[str] = mapped_column(String(32))
+    storage_key: Mapped[str | None] = mapped_column(String(255))
+    data: Mapped[dict[str, Any]]
+    model_name: Mapped[str | None] = mapped_column(String(128))
+    model_version: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime]
+
+
 class StageRunRow(Base):
     """One row per (case, stage): its latest run, used for timings and to skip
-    stages that already finished when a case is re-run."""
+    stages that already ran when a case is retried."""
 
     __tablename__ = "stage_runs"
 

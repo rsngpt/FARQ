@@ -37,6 +37,10 @@ class Settings(BaseSettings):
 
     rules_path: Path = REPO_ROOT / "config" / "rules" / "verdicts.yaml"
 
+    # Queue that GPU stages are sent to. Set to "cpu" on machines without an
+    # NVIDIA GPU (and leave out the gpu compose profile); they then run slowly.
+    gpu_queue: str = "gpu"
+
     @property
     def database_url(self) -> URL:
         return URL.create(

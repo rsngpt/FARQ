@@ -35,6 +35,16 @@ class StageView(BaseModel):
     error: str | None
 
 
+class ArtifactView(BaseModel):
+    """What a stage produced; the data itself is left out (it can be large)."""
+
+    kind: str
+    stage: str
+    storage_key: str | None
+    model_name: str | None
+    model_version: str | None
+
+
 class CaseView(BaseModel):
     id: UUID
     status: str
@@ -42,6 +52,7 @@ class CaseView(BaseModel):
     needs_review: bool
     reply_text: str | None
     evidence: list[EvidenceView]
+    artifacts: list[ArtifactView]
     stages: list[StageView]
 
 
@@ -92,6 +103,7 @@ def get_case(case_id: UUID, repo: RepoDep) -> CaseView:
         needs_review=case.decision.needs_review if case.decision else False,
         reply_text=case.reply_text,
         evidence=[EvidenceView.model_validate(e, from_attributes=True) for e in case.evidence],
+        artifacts=[ArtifactView.model_validate(a, from_attributes=True) for a in case.artifacts],
         stages=[
             StageView(
                 stage=t.stage, status=t.status, duration_ms=round(t.duration_ms), error=t.error

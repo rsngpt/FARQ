@@ -1,4 +1,5 @@
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import BinaryIO
 from uuid import UUID
 
@@ -58,6 +59,9 @@ class InMemoryMediaStore:
 
     def put(self, key: str, fileobj: BinaryIO, content_type: str) -> None:
         self.objects[key] = fileobj.read()
+
+    def download(self, key: str, path: Path) -> None:
+        path.write_bytes(self.objects[key])
 
 
 @pytest.fixture

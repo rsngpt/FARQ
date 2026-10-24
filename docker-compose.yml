@@ -46,8 +46,8 @@ services:
     <<: *app
     command: celery -A farq.workers.celery_app worker -Q cpu -n cpu@%h --concurrency=2 --loglevel=info
 
-  # Off by default (needs an NVIDIA GPU): docker compose --profile gpu up
-  # One job at a time so two large models are never loaded together.
+  # Needs an NVIDIA GPU. Started when COMPOSE_PROFILES=gpu (the default in
+  # .env.example). One job at a time so two large models are never loaded together.
   worker-gpu:
     <<: *app
     profiles: ["gpu"]

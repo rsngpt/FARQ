@@ -5,16 +5,23 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from farq.domain.casefile import (
+    Artifact,
     CaseContext,
     CaseFile,
     CaseStatus,
     Decision,
     Evidence,
-    StageStatus,
     StageTiming,
     utcnow,
 )
-from farq.storage.tables import AuditRow, CaseRow, EvidenceRow, KnownFakeRow, StageRunRow
+from farq.storage.tables import (
+    ArtifactRow,
+    AuditRow,
+    CaseRow,
+    EvidenceRow,
+    KnownFakeRow,
+    StageRunRow,
+)
 
 
 def media_key_for(case_id: UUID, extension: str) -> str:
@@ -91,6 +98,11 @@ class CaseRepository:
             .where(EvidenceRow.case_id == case_id)
             .order_by(EvidenceRow.created_at, EvidenceRow.id)
         )
+        artifacts = self.session.scalars(
+            select(ArtifactRow)
+            .where(ArtifactRow.case_id == case_id)
+            .order_by(ArtifactRow.created_at, ArtifactRow.id)
+        )
         runs = self.session.scalars(
             select(StageRunRow)
             .where(StageRunRow.case_id == case_id)
@@ -108,6 +120,7 @@ class CaseRepository:
             status=CaseStatus(row.status),
             created_at=row.created_at,
             evidence=[Evidence.model_validate(e, from_attributes=True) for e in evidence],
+            artifacts=[Artifact.model_validate(a, from_attributes=True) for a in artifacts],
             timings=[StageTiming.model_validate(r, from_attributes=True) for r in runs],
             decision=Decision.model_validate(row.decision) if row.decision else None,
             reply_text=row.reply_text,
@@ -116,24 +129,26 @@ class CaseRepository:
     def set_status(self, case_id: UUID, status: CaseStatus) -> None:
         self.session.get_one(CaseRow, case_id).status = status
 
-    def finished_stages(self, case_id: UUID) -> set[str]:
-        """Stages that already ran without failing; a re-run skips them."""
+    def stages_run(self, case_id: UUID) -> set[str]:
+        """Stages with a recorded run (ok, stub or failed). A retry skips them;
+        a stage interrupted mid-run has no record, so it runs again."""
         return set(
-            self.session.scalars(
-                select(StageRunRow.stage).where(
-                    StageRunRow.case_id == case_id,
-                    StageRunRow.status.in_([StageStatus.OK, StageStatus.STUB]),
-                )
-            )
+            self.session.scalars(select(StageRunRow.stage).where(StageRunRow.case_id == case_id))
         )
 
-    def replace_stage_evidence(self, case_id: UUID, stage: str, evidence: list[Evidence]) -> None:
-        """Swap a stage's evidence, so running a stage twice never duplicates rows."""
-        self.session.execute(
-            delete(EvidenceRow).where(EvidenceRow.case_id == case_id, EvidenceRow.stage == stage)
-        )
+    def replace_stage_outputs(
+        self, case_id: UUID, stage: str, evidence: list[Evidence], artifacts: list[Artifact]
+    ) -> None:
+        """Swap a stage's evidence and artifacts, so running a stage twice never
+        duplicates rows."""
+        for table in (EvidenceRow, ArtifactRow):
+            self.session.execute(
+                delete(table).where(table.case_id == case_id, table.stage == stage)
+            )
         for e in evidence:
             self.session.add(EvidenceRow(case_id=case_id, **e.model_dump()))
+        for a in artifacts:
+            self.session.add(ArtifactRow(case_id=case_id, **a.model_dump()))
 
     def record_stage(self, case_id: UUID, timing: StageTiming) -> None:
         self.session.merge(StageRunRow(case_id=case_id, **timing.model_dump()))

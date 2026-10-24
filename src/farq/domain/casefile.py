@@ -16,6 +16,10 @@ def new_evidence_id() -> str:
     return f"ev_{uuid4().hex[:12]}"
 
 
+def new_artifact_id() -> str:
+    return f"ar_{uuid4().hex[:12]}"
+
+
 class SourceType(StrEnum):
     """Where a piece of evidence comes from."""
 
@@ -65,6 +69,20 @@ class Evidence(BaseModel):
     model_name: str | None = None
     model_version: str | None = None
     details: dict[str, Any] = Field(default_factory=dict)  # raw scores; never shown to users
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class Artifact(BaseModel):
+    """Something a stage produced for later stages: keyframes, audio, OCR text,
+    a transcript. Not evidence by itself."""
+
+    id: str = Field(default_factory=new_artifact_id)
+    stage: str
+    kind: str  # e.g. "media_info", "keyframes", "audio_16k", "transcript"
+    storage_key: str | None = None  # file in the media store, if any
+    data: dict[str, Any] = Field(default_factory=dict)  # small structured results
+    model_name: str | None = None
+    model_version: str | None = None
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -132,9 +150,13 @@ class CaseFile(BaseModel):
     status: CaseStatus
     created_at: datetime
     evidence: list[Evidence] = Field(default_factory=list)
+    artifacts: list[Artifact] = Field(default_factory=list)
     timings: list[StageTiming] = Field(default_factory=list)
     decision: Decision | None = None
     reply_text: str | None = None
+
+    def artifact(self, kind: str) -> Artifact | None:
+        return next((a for a in self.artifacts if a.kind == kind), None)
 
     def evidence_by_ids(self, ids: list[str]) -> list[Evidence]:
         by_id = {e.id: e for e in self.evidence}

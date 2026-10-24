@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 
 from farq.pipeline.runner import run_pipeline
+from farq.pipeline.stages import DEFAULT_STAGES
 from farq.privacy import hash_user_id
 from farq.storage.tables import CaseRow
 
@@ -54,11 +55,11 @@ def test_raw_user_id_is_never_stored(client, session):
     assert "local-upload" not in row.user_hash
 
 
-def test_case_view_shows_reply_without_raw_details(client, repo, rules, queued):
+def test_case_view_shows_reply_without_raw_details(client, repo, rules, media, queued):
     case_id = client.post("/cases", files={"file": VIDEO}).json()["case_id"]
     assert client.get(f"/cases/{case_id}").json()["status"] == "received"
 
-    run_pipeline(queued[0], repo, rules)
+    run_pipeline(queued[0], repo, rules, media)
     view = client.get(f"/cases/{case_id}").json()
     assert view["status"] == "decided"
     assert view["verdict"] == "NOT VERIFIED"
@@ -71,16 +72,16 @@ def test_unknown_case_is_404(client):
     assert client.get("/cases/00000000-0000-0000-0000-000000000000").status_code == 404
 
 
-def test_latency_metrics_come_from_real_runs(client, repo, rules, queued):
+def test_latency_metrics_come_from_real_runs(client, repo, rules, media, queued):
     empty = client.get("/metrics/latency").json()
     assert empty["cases"] == 0
     assert empty["end_to_end"] == {"known_fake": None, "new_video": None}
 
     client.post("/cases", files={"file": VIDEO})
-    run_pipeline(queued[0], repo, rules)
+    run_pipeline(queued[0], repo, rules, media)
     report = client.get("/metrics/latency").json()
     assert report["cases"] == 1
     assert report["end_to_end"]["new_video"]["count"] == 1
     assert report["end_to_end"]["known_fake"] is None
-    assert set(report["stages"]) == {"ingest", "lookup", "extract", "verify", "analyse", "decide"}
+    assert set(report["stages"]) == {s.name for s in DEFAULT_STAGES} | {"decide"}
     assert report["targets_ms"] == {"known_fake": 10_000, "new_video": 60_000}

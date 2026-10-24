@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import BinaryIO, Protocol
 
 import boto3
@@ -8,6 +9,8 @@ from farq.settings import Settings
 
 class MediaStore(Protocol):
     def put(self, key: str, fileobj: BinaryIO, content_type: str) -> None: ...
+
+    def download(self, key: str, path: Path) -> None: ...
 
 
 class S3MediaStore:
@@ -38,3 +41,6 @@ class S3MediaStore:
         self._client.upload_fileobj(
             fileobj, self.bucket, key, ExtraArgs={"ContentType": content_type}
         )
+
+    def download(self, key: str, path: Path) -> None:
+        self._client.download_file(self.bucket, key, str(path))
