@@ -1,0 +1,96 @@
+name: farq
+
+# Shared settings for the API and workers (same image, different command).
+x-app: &app
+  build: .
+  image: farq-app
+  env_file: .env
+  restart: unless-stopped
+  depends_on:
+    redis:
+      condition: service_healthy
+    postgres:
+      condition: service_healthy
+    s3:
+      condition: service_healthy
+
+services:
+  api:
+    <<: *app
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  worker-io:
+    <<: *app
+    command: celery -A farq.workers.celery_app worker -Q io -n io@%h --concurrency=8 --loglevel=info
+
+  worker-cpu:
+    <<: *app
+    command: celery -A farq.workers.celery_app worker -Q cpu -n cpu@%h --concurrency=2 --loglevel=info
+
+  # Off by default (needs an NVIDIA GPU): docker compose --profile gpu up
+  # One job at a time so two large models are never loaded together.
+  worker-gpu:
+    <<: *app
+    profiles: ["gpu"]
+    command: celery -A farq.workers.celery_app worker -Q gpu -n gpu@%h --pool=solo --loglevel=info
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  redis:
+    image: redis:7.4.6-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg17
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # S3-compatible media store (MinIO's images were removed from Docker Hub).
+  # Our code only speaks the S3 API, so the store can be swapped later.
+  s3:
+    image: chrislusf/seaweedfs:4.46
+    restart: unless-stopped
+    command: server -dir=/data -ip.bind=0.0.0.0 -s3 -s3.port=8333 -master.volumeSizeLimitMB=1024
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - s3data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:9333/cluster/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
+  s3data:
