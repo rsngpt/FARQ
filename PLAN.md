@@ -42,12 +42,17 @@ from other real videos, AI only on the lips.
 ## Milestones
 | # | What | Status |
 |---|---|---|
-| M1 | Intake + CaseFile + round trip (Telegram deferred; local upload first) | in progress |
-| M2 | Ingest + OCR + Whisper + entities + known-fake hash | |
-| M3 | Source map + find-original diff | |
-| M4 | Audio-visual binding v1 + audio deepfake head | |
-| M5 | Rules engine + investigator report + reviewer + police report | |
-| M6 | Test set run (metrics) + demo polish | |
+| M1 | Intake + CaseFile + round trip; WhatsApp bot contract (Roshan) | done |
+| M2 | Ingest + OCR + Whisper + entities + exact known-fake hash | done |
+| M3 | Source map (picture + speech) + find-original (mouth vs face, word diff) | done; mouth check not yet on real faces |
+| M4 | Voice-and-body check v1 (calibrated per person) | built; needs the team's clips to calibrate. Audio deepfake head skipped: no labelled training data |
+| M5 | Rules engine + police report (complaint text + PDF) | done (reviewer and AI report dropped) |
+| M6 | Test set + measured results + runbook | script and runbook done; real run waits for the team's clips |
+
+Stand-in test set (synthetic pictures + team voice recordings, 25 Oct): 8 of 8
+correct after fixing one false alarm (a squeezed genuine copy). Squeezed (480p)
+videos took 22-44 s; 720p text-dense synthetic ones 100-118 s (OCR). Not real
+results: the real run needs the enrolled member's clips.
 
 Code freeze: PENDING. Rehearsal: PENDING.
 
