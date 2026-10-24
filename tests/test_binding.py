@@ -37,6 +37,23 @@ def test_body_that_follows_the_voice_scores_higher_than_one_that_does_not():
     assert together > apart + 0.3
 
 
+def test_audio_emphasis_on_real_speech_length(tmp_path):
+    """13 s of audio at 16 kHz (the length that broke pYIN in the container)."""
+    import warnings
+
+    from farq.binding import RATE, audio_emphasis
+
+    t = np.arange(13 * 16000) / 16000
+    # A voice-like tone whose pitch and loudness rise and fall every second.
+    f = 150 + 40 * np.sin(2 * np.pi * 0.5 * t)
+    y = (0.3 + 0.2 * np.sin(2 * np.pi * 1.0 * t)) * np.sin(2 * np.pi * np.cumsum(f) / 16000)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        out = audio_emphasis(y.astype(np.float32))
+    assert abs(len(out) - 13 * RATE) <= 2
+    assert np.isfinite(out).all() and out.std() > 0
+
+
 def test_too_short_to_measure():
     assert sync_score(spikes(30), spikes(30)) is None  # under one 4 s window
 

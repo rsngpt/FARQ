@@ -56,6 +56,18 @@ def preload_gpu_worker_models(**_: object) -> None:
 
         started = time.perf_counter()
         _log_loaded(get_embedder(s.bge_m3_dir, s.bge_m3_revision, s.embed_threads), started)
+    if "binding" in _wanted():
+        # The face model, and librosa's one-off code compilation (measured 8.2 s on
+        # the first call, 0.06 s after), so the first case doesn't pay for them.
+        import numpy as np
+
+        from farq.binding import audio_emphasis
+        from farq.sourcemap.original import get_face_finder
+
+        started = time.perf_counter()
+        finder = get_face_finder(s.face_model_path)
+        audio_emphasis(np.zeros(5 * 16000, dtype=np.float32))
+        _log_loaded(finder, started)
 
 
 @worker_process_init.connect

@@ -31,10 +31,32 @@ def test_picture_and_voice_from_different_recordings():
 
 
 def test_same_recording_but_a_different_moment_is_not_together():
-    data = {"originals": [comp()], "speech": [voice("A", "Budget talk", clip_start=200.0)]}
+    different_words = {"similarity": 0.2, "changes": []}
+    data = {"originals": [comp(speech=different_words)],
+            "speech": [voice("A", "Budget talk", clip_start=200.0)]}  # fmt: skip
     assert types(source_evidence(data)) == [
         ("not_recorded_together", Strength.STRONG, Indicates.SCAM)
     ]
+
+
+def test_loosely_timed_similar_match_does_not_accuse_a_genuine_copy():
+    """Seen in testing: a squeezed genuine copy whose 'similar' speech match was
+    placed 2.8 s off the picture's moment was flagged. It must not be."""
+    same_words = {"similarity": 0.95, "changes": []}
+    loose = voice("A", "Budget talk", start=20.9, end=44.1, clip_start=64.0 + 18.1) | {
+        "method": "similar"
+    }
+    data = {"originals": [comp("low", speech=same_words)], "speech": [loose]}
+    assert "not_recorded_together" not in [e.type for e in source_evidence(data)]
+
+
+def test_exact_match_elsewhere_in_the_same_recording_with_same_words_is_fine():
+    """A phrase said twice in one speech can match the other occurrence; if the
+    original says the same words at the aligned moment, it's not a stitch."""
+    same_words = {"similarity": 0.95, "changes": []}
+    data = {"originals": [comp("low", speech=same_words)],
+            "speech": [voice("A", "Budget talk", clip_start=200.0)]}  # fmt: skip
+    assert "not_recorded_together" not in [e.type for e in source_evidence(data)]
 
 
 def test_unknown_voice_with_different_words():

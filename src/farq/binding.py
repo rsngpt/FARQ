@@ -11,6 +11,7 @@ when there are at least MIN_CALIBRATION clips. Not yet validated on real faces
 (the team's clips are needed).
 """
 
+import warnings
 from pathlib import Path
 from typing import Protocol
 
@@ -69,20 +70,33 @@ def visual_emphasis(motions: list[tuple[float, float] | None]) -> np.ndarray:
     return _smooth(_z(speed[:, 0]) + _z(speed[:, 1]))
 
 
+AUDIO_STEP = 4  # pitch frames (20 ms each) per signal sample (80 ms)
+
+
 def audio_emphasis(samples: np.ndarray, sr: int = 16000) -> np.ndarray:
-    """Pitch rises plus loudness rises, per sample."""
+    """Pitch rises plus loudness rises, per sample.
+
+    Pitch from librosa's YIN at 20 ms steps, averaged to RATE. (pYIN broke at
+    80 ms steps, "Target size must be at least input size", and took ~17 s.)
+    Frames quieter than half the median loudness count as unvoiced."""
     import librosa
 
-    hop = int(sr / RATE)
-    f0, voiced, _ = librosa.pyin(samples, fmin=70, fmax=400, sr=sr,
-                                 frame_length=2048, hop_length=hop)  # fmt: skip
-    semitones = 12 * np.log2(np.where(voiced & ~np.isnan(f0), f0, np.nan) / 100.0)
-    pitch_rise = np.clip(np.nan_to_num(np.diff(semitones, prepend=np.nan)), 0, None)
-    rms = librosa.feature.rms(y=samples, frame_length=2048, hop_length=hop)[0]
-    loud = np.log(rms + 1e-6)
+    hop = int(sr / RATE / AUDIO_STEP)
+    f0 = librosa.yin(samples, fmin=70, fmax=400, sr=sr, frame_length=1024, hop_length=hop)
+    rms = librosa.feature.rms(y=samples, frame_length=1024, hop_length=hop)[0]
+    n = min(len(f0), len(rms)) // AUDIO_STEP * AUDIO_STEP
+    if n == 0:
+        return np.zeros(0)
+    f0, rms = f0[:n], rms[:n]
+    voiced = rms > 0.5 * np.median(rms)
+    semitones = np.where(voiced, 12 * np.log2(f0 / 100.0), np.nan)
+    with warnings.catch_warnings():  # "Mean of empty slice" where all 4 frames are unvoiced
+        warnings.simplefilter("ignore", RuntimeWarning)
+        pitch = np.nanmean(semitones.reshape(-1, AUDIO_STEP), axis=1)  # NaN where unvoiced
+    loud = np.log(rms.reshape(-1, AUDIO_STEP).mean(axis=1) + 1e-6)
+    pitch_rise = np.clip(np.nan_to_num(np.diff(pitch, prepend=np.nan)), 0, None)
     loud_rise = np.clip(np.diff(loud, prepend=loud[:1]), 0, None)
-    n = min(len(pitch_rise), len(loud_rise))
-    return _smooth(_z(pitch_rise[:n]) + _z(loud_rise[:n]))
+    return _smooth(_z(pitch_rise) + _z(loud_rise))
 
 
 def sync_score(voice: np.ndarray, body: np.ndarray) -> float | None:

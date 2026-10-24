@@ -27,12 +27,19 @@ def source_evidence(data: dict[str, Any]) -> list[Evidence]:
         span = (seg["start"], seg["end"])
         speech = [s for s in data.get("speech", [])
                   if s.get("clip_id") and s["start"] < span[1] and s["end"] > span[0]]  # fmt: skip
+        words = comp.get("speech") or {}
+        # "Same recording, different moment" needs precise timing (exact word
+        # matches; "similar" matches are only placed to a 10-word window) AND the
+        # original's own words at the aligned moment must differ. Seen in testing:
+        # a squeezed genuine copy was flagged because a similar match landed
+        # 2.8 s off the picture's moment.
+        aligned_words_differ = words.get("similarity", 0.0) < WORDS_SAME
         elsewhere = [
             s for s in speech
             if s["clip_id"] != seg["clip_id"]
-            or abs((s["clip_start"] - s["start"]) - comp["offset_s"]) > TIME_TOLERANCE_S
+            or (s.get("method") == "exact" and aligned_words_differ
+                and abs((s["clip_start"] - s["start"]) - comp["offset_s"]) > TIME_TOLERANCE_S)
         ]  # fmt: skip
-        words = comp.get("speech") or {}
         not_together = bool(elsewhere)
 
         if elsewhere:

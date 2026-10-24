@@ -57,6 +57,7 @@ Never say "genuine", "safe" or quote raw scores. NOT VERIFIED means "we couldn't
 | First case very slow | models not preloaded yet | wait for the 4 `preloaded` lines |
 | NOT_VERIFIED for a fake | picture or voice source not in the library | check `farq library list`; add the clip |
 | Docker not answering | disk full or Docker stuck | free space; quit and restart Docker Desktop |
+| A case takes over 60 s | lots of on-screen text: OCR reads up to 12 frames (a text-dense synthetic test video took 73.6 s in OCR) | use a demo video with few captions; or set `OCR_MAX_FRAMES=6` in `.env` and restart workers |
 
 ## Fallback (no WhatsApp, no internet)
 

@@ -63,7 +63,7 @@ services:
     profiles: ["gpu"]
     environment:
       # Load at start, not on the first case: Whisper (GPU) and BGE-M3 (CPU, 2.2 GB RAM)
-      PRELOAD_MODELS: whisper,bge
+      PRELOAD_MODELS: whisper,bge,binding
     command: celery -A farq.workers.celery_app worker -Q gpu -n gpu@%h --pool=solo --loglevel=info
     deploy:
       resources:

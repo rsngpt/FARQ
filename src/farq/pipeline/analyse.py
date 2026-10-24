@@ -59,7 +59,7 @@ def analyse(case: CaseFile, ctx: StageContext) -> StageOutput:
                 indicates=Indicates.SCAM,
                 level=Level(level),
                 reason=f"Their head and eyebrow movements don't match this voice ({explanation}).",
-                model_name="voice-body sync v1 (MediaPipe + librosa pYIN)",
+                model_name="voice-body sync v1 (MediaPipe + librosa YIN)",
                 model_version=finder.version,
                 details={k: v for k, v in record.items() if k != "score"},
             )
