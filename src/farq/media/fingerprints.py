@@ -12,6 +12,10 @@ def fingerprint_video(path: Path, workdir: Path, duration_s: float | None) -> di
     """PDQ hash of frames at FINGERPRINT_FPS (fewer for long videos).
     Returns {"fps": ..., "frames": [{"t": seconds, "pdq": hex, "q": quality}]}."""
     settings = get_settings()
+    if duration_s is None:
+        # Without the length, frame thinning would assume the 10-minute maximum
+        # and sample short videos too sparsely.
+        duration_s = ffmpeg.probe(path, settings.ffmpeg_timeout_s).duration_s
     out = workdir / "fingerprint-frames"
     out.mkdir()
     fps, frames = ffmpeg.extract_frames(

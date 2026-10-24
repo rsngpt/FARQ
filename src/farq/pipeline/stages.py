@@ -101,12 +101,19 @@ def _entities(case: CaseFile, ctx: StageContext) -> StageOutput:
     return entities(case, ctx)
 
 
+def _source_map(case: CaseFile, ctx: StageContext) -> StageOutput:
+    from farq.pipeline.source_map import source_map
+
+    return source_map(case, ctx)
+
+
 DEFAULT_STAGES: list[Stage] = [
     Stage("ingest", "cpu", _ingest),
     Stage("lookup", "io", lookup_known_fake),
     Stage("ocr", "cpu", _ocr),
     Stage("transcribe", "gpu", _transcribe),
     Stage("entities", "cpu", _entities),
-    Stage("verify", "io", nothing_yet, stub=True),  # M3: source map, official lists
+    Stage("source_map", "cpu", _source_map),
+    Stage("verify", "io", nothing_yet, stub=True),  # official lists (RBI, NSE, SEBI)
     Stage("analyse", "gpu", nothing_yet, stub=True),  # M4: audio-visual binding, audio head
 ]
