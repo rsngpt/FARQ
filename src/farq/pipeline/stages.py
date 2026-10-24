@@ -95,12 +95,18 @@ def _transcribe(case: CaseFile, ctx: StageContext) -> StageOutput:
     return transcribe(case, ctx)
 
 
+def _entities(case: CaseFile, ctx: StageContext) -> StageOutput:
+    from farq.pipeline.entities import entities
+
+    return entities(case, ctx)
+
+
 DEFAULT_STAGES: list[Stage] = [
     Stage("ingest", "cpu", _ingest),
     Stage("lookup", "io", lookup_known_fake),
     Stage("ocr", "cpu", _ocr),
     Stage("transcribe", "gpu", _transcribe),
-    Stage("entities", "cpu", nothing_yet, stub=True),  # M2: numbers, UPI IDs, links
+    Stage("entities", "cpu", _entities),
     Stage("verify", "io", nothing_yet, stub=True),  # M3: source map, official lists
     Stage("analyse", "gpu", nothing_yet, stub=True),  # M4: audio-visual binding, audio head
 ]

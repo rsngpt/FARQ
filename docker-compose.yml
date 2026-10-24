@@ -48,6 +48,8 @@ services:
   worker-cpu:
     <<: *app
     command: celery -A farq.workers.celery_app worker -Q cpu -n cpu@%h --concurrency=2 --loglevel=info
+    environment:
+      PRELOAD_MODELS: ocr  # each of the 2 worker processes loads OCR at start
 
   # Needs an NVIDIA GPU. Started when COMPOSE_PROFILES=gpu (the default in
   # .env.example). One job at a time so two large models are never loaded together.
@@ -58,6 +60,8 @@ services:
       target: gpu  # adds NVIDIA's CUDA libraries
     image: farq-app-gpu
     profiles: ["gpu"]
+    environment:
+      PRELOAD_MODELS: whisper  # load Whisper at start, not on the first case
     command: celery -A farq.workers.celery_app worker -Q gpu -n gpu@%h --pool=solo --loglevel=info
     deploy:
       resources:

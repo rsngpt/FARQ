@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     whisper_gpu_compute_type: str = "int8_float16"
     whisper_beam_size: int = 5
 
+    # Models a worker loads at start-up, comma-separated (e.g. "whisper"), so
+    # the first case doesn't wait for the load. Set on the GPU worker only.
+    preload_models: str = ""
+
     rules_path: Path = REPO_ROOT / "config" / "rules" / "verdicts.yaml"
 
     # Queue that GPU stages are sent to. Set to "cpu" on machines without an
