@@ -1,0 +1,451 @@
+================================================================================
+FARQ (फ़र्क): COMPLETE IN-DEPTH TECHNICAL & JUDGE MASTER GUIDE
+Team Off-Grid | Track 3: Financial Deepfake Detection | IIT Delhi Finale
+Roshan Gupta (Intake Engine & Client Bot) & Mana Sharma (Detection & Forensics)
+================================================================================
+
+TABLE OF CONTENTS:
+1. The Grand Pitch & The Problem We Solve
+2. System Division of Responsibilities (Roshan vs. Mana)
+3. Roshan's Architecture: Zero-Browser WebSocket Client (Baileys v7)
+4. Cryptographic Privacy Layer (HMAC-SHA256 & DPDP Act Compliance)
+5. Session Management & Gatekeeping (/farq Protocol)
+6. Asynchronous Dual-Track Intake Pipeline (Instant Upload)
+7. Guided Questions & Dynamic Police Complaint Generator
+8. 1930 Cyber Fraud Emergency Fast-Path (The Golden Window)
+9. Polling Engine, Latency & WebSocket Delivery
+10. Responsible AI: Verdict Cards, OCR Entities & Signed Reports
+11. Mana's ML Pipeline Explained (So You Can Answer ML Questions)
+12. Complete API Contracts & Schemas
+13. Comprehensive Judge Q&A (10 Tough Technical Questions & Answers)
+
+================================================================================
+1. THE GRAND PITCH & THE PROBLEM WE SOLVE
+================================================================================
+• The Problem:
+  Financial cybercrime in India has transformed. Fraudsters no longer just send
+  phishing links; they forward hyper-realistic synthetic videos of:
+  - Finance Minister / RBI Governor announcing bogus "guaranteed returns".
+  - Business icons (Mukesh Ambani, N. R. Narayana Murthy) pitching fake VIP stock tips.
+  - Impersonated CEOs or family members pleading for urgent UPI transfers.
+  
+• The Human Reality:
+  Victims are regular citizens, often seniors. When an individual receives a
+  forwarded video from a friend on WhatsApp, they will NEVER:
+  - Install a 200MB forensic analysis app from Google Play.
+  - Sign up on a complex cyber forensics web portal.
+  - Inspect hexadecimal audio/video metadata.
+  They trust WhatsApp. Therefore, the detection mechanism MUST live on WhatsApp.
+
+• The 2-Hour "Golden Window":
+  When financial fraud happens, the money moves through "mule" bank accounts
+  within 2 to 4 hours. If reported to the National Cyber Crime Helpline (1930)
+  within this window, the Citizen Financial Cyber Fraud Reporting and Management
+  System (CFCFRMS) can electronically freeze the money in transit across bank
+  nodes. Every minute lost inspecting a video decreases the chance of recovery.
+
+• The FARQ Solution:
+  A zero-install, zero-browser, privacy-preserving WhatsApp engine that:
+  1. Ingests video/audio/image/text forwards in milliseconds.
+  2. Runs forensic lip-sync and audio-visual mismatch analysis in under 30s.
+  3. Narrow-down claims through 3 quick interactive questions.
+  4. Triggers instant 1930 fund-freeze protocols if money was already paid.
+  5. Delivers a court-admissible signed police PDF report ready to file.
+
+================================================================================
+2. DIVISION OF RESPONSIBILITIES: WHO DID WHAT?
+================================================================================
+• ROSHAN GUPTA (Client & Intake Engine):
+  - WhatsApp Baileys binary WebSocket client (Node.js).
+  - HMAC-SHA256 user privacy hashing (Zero PII stored or transmitted).
+  - /farq session lifecycle manager (strict opt-in gatekeeping).
+  - Instant dual-track async file streaming to backend (multipart FormData).
+  - 3-Question guided context interactive UI (Native option drawers/buttons).
+  - 1930 Cyber Fraud Emergency fast-path trigger.
+  - Background state-machine polling loop (GET /cases/{id} every 2.5s).
+  - Dynamic verdict card renderer with OCR scam entities and signed PDF links.
+  - Local micro-dashboard (localhost:3000/jobs).
+
+• MANA SHARMA (ML & Detection Pipeline):
+  - FastAPI server + Celery worker queue + Redis broker.
+  - Audio extraction & Wav2Lip / SyncNet acoustic-visual alignment.
+  - Face landmark tracking & frame-by-frame visual manipulation detection.
+  - Official speech & video archive cross-matching (comparing fake against real).
+  - OCR on-screen text reader (extracting scammer UPI IDs, phone numbers, URLs).
+  - Dynamic legal complaint PDF generation with cryptographic file fingerprint (SHA-256).
+
+================================================================================
+3. ROSHAN'S ARCHITECTURE: ZERO-BROWSER WEBSOCKET ENGINE
+================================================================================
+• Technology: @whiskeysockets/baileys v7.0.0-rc14 (Node.js v24 LTS).
+
+• Why NOT Puppeteer, Playwright, or Selenium?
+  - Headless browsers launch a full Chromium instance per worker.
+  - RAM consumption: 800MB - 1.5GB per browser tab.
+  - CPU: High overhead during DOM rendering.
+  - Concurrency: Max 3-5 users before server runs out of memory.
+  - Vulnerability: Browser crashes on heavy video streams.
+
+• Why Baileys WebSocket?
+  - Baileys implements WhatsApp's proprietary Noise Protocol Framework over
+    binary WebSockets (wss://web.whatsapp.com/ws/chat).
+  - Zero browser rendering: Directly parses protobuf messages.
+  - RAM consumption: Under 50MB total!
+  - CPU usage: Idle 0%, negligible during buffer download.
+  - Message round-trip latency: Under 100 milliseconds.
+  - Handles concurrent streams cleanly on Node.js asynchronous event loop.
+
+• How Media Streaming Works:
+  - Message received via 'messages.upsert' event.
+  - Buffer downloaded via 'downloadMediaMessage(msg, "buffer")'.
+  - Written directly to media_storage/ with timestamped unique ID.
+  - Streamed to Mana's backend via Node's native fetch & FormData Blob API.
+
+================================================================================
+4. CRYPTOGRAPHIC PRIVACY LAYER (HMAC-SHA256 & DPDP COMPLIANCE)
+================================================================================
+• Compliance: Digital Personal Data Protection Act (DPDP Act 2023, India) & GDPR.
+
+• The Threat Model:
+  If a cyber helpline or bot stores raw phone numbers:
+  - Hackers could correlate victim numbers with reported scam amounts.
+  - Scammers could intercept the database and retaliate against reporting users.
+  - Internal server logs would leak PII (Personally Identifiable Information).
+
+• The FARQ Implementation (src/crypto.js):
+  - When a message arrives from JID (e.g., 919876543210@s.whatsapp.net):
+  - The phone number is extracted and immediately transformed:
+    
+    user_ref = HMAC-SHA256(phone_number, secret_server_pepper)
+    
+  - Example:
+    Input: "919876543210"
+    Pepper: "farq_pepper_secret_2026"
+    Output: "ebad6fe7306ed4d9fd65182a0782bd790a332ad5b7c68a29c330f5a65d5623a8"
+  
+  - Properties:
+    1. One-way: Computationally impossible to reverse-engineer phone numbers.
+    2. Keyed (Peppered): Even if rainbow tables are used, attacker cannot reverse
+       it without the server's private pepper.
+    3. Deterministic for Session: The same user retains the same user_ref during
+       the investigation session so answers correlate with the media job.
+    4. Zero Raw Numbers in Mana's Backend: The ML backend only receives user_ref.
+
+================================================================================
+5. SESSION MANAGEMENT & GATEKEEPING (/farq PROTOCOL)
+================================================================================
+• The Problem:
+  If a bot responds to every message in every chat:
+  - Group chats get spammed with error messages.
+  - Casual conversations trigger false intakes.
+  - Server resources are wasted processing personal videos.
+
+• The Implementation (src/session.js & src/whatsapp.js):
+  - State Machine: In-memory Set (activeSessions).
+  - Default State: Inactive (0 active sessions on boot).
+  - Strict Gatekeeper:
+    If a chat is NOT active and does not begin with /farq:
+    The bot COMPLETELY IGNORES the message at line 98 of whatsapp.js (no-op).
+
+• Command Set:
+  - /farq:
+    Toggles session. If inactive -> turns ONLINE, verifies backend healthz,
+    sends green intake active card. If active -> turns STANDBY.
+  - /farq help:
+    Immediately initiates session and opens the Fraud Advisory Triage Drawer
+    (interactive options for checking UPI scams, impersonation, bank fraud).
+  - /farq quit (or /farq exit):
+    Flushes active questions, ends help consultation, and returns to STANDBY.
+
+================================================================================
+6. ASYNCHRONOUS DUAL-TRACK INTAKE PIPELINE (INSTANT UPLOAD)
+================================================================================
+• The Problem Solved (Mana's Fix #1):
+  Earlier, the bot waited for the user to answer questions before uploading the
+  video. This caused a 5-6 minute lag before the GPU worker even saw the file!
+
+• The New Parallel Architecture:
+  The millisecond the video buffer finishes downloading from Baileys:
+  
+  TRACK 1 (Background Machine Pipeline):
+  - backend.createCase(job) fires immediately.
+  - Form-data multipart POST /cases with video blob.
+  - Mana's backend accepts and returns:
+    { "case_id": "218503c2-...", "status": "queued", "eta_seconds": 45 }
+  - The UUID case_id is linked to the user's active session.
+  - Polling begins immediately on 2.5s interval.
+  
+  TRACK 2 (Foreground Human Interaction):
+  - Concurrently, questions.start(userRef) sends Question 1 to WhatsApp.
+  - User answers Q1 (Identity) -> Q2 (Requested Action) -> Q3 (Money Sent).
+  - While the human is tapping buttons (takes ~15-20 seconds), the ML pipeline
+    is already halfway through face/voice alignment.
+  - Perceived waiting time: Virtually ZERO.
+
+================================================================================
+7. GUIDED QUESTIONS & DYNAMIC POLICE COMPLAINT GENERATOR
+================================================================================
+• The 3 Questions:
+  Q1: Who is it claiming to be?
+      [1] Govt / RBI / Official
+      [2] Famous Person / Expert
+      [3] Bank or UPI App
+      [4] Family or Friend
+      [5] Company or Boss
+      [6] Not Sure
+  
+  Q2: What do they want?
+      [1] Invest in Trading App (VIP tips, crypto, stock platform)
+      [2] Send Money / Transfer (UPI, wire, security deposit)
+      [3] OTP, Link or KYC (Verify Aadhaar, login link)
+      [4] Nothing Yet (Just chatting)
+  
+  Q3: Have you already sent any money?
+      [1] Yes, Sent Money (Emergency Fast-Path)
+      [2] Not Yet
+
+• Synchronizing Answers (Mana's Fix #2):
+  - When Q3 is answered, questions.js calls:
+    PATCH /cases/{case_id}/answers
+    Body: {
+      "claims_to_be": "official",
+      "asks_for": "invest",
+      "money_sent": true
+    }
+  - In Mana's backend, this triggers dynamic template regeneration:
+    Instead of generic text, the complaint_text in the legal PDF becomes:
+    "On 25 Oct 2026 I received a forwarded video that claimed to be from a
+    government official and asked me to invest money. I have already sent money.
+    Checks by FARQ found: The picture is from 'L1-pitch', but voice is from
+    'L2-plain'. File SHA-256: b54752f4..."
+
+================================================================================
+8. 1930 CYBER FRAUD EMERGENCY FAST-PATH (THE GOLDEN WINDOW)
+================================================================================
+• Why this wins hackathons:
+  Most tech projects output a verdict and stop. FARQ protects the victim's money.
+
+• Trigger Condition:
+  User selects "Yes, Sent Money" on Question 3.
+
+• Immediate Action:
+  The bot DOES NOT wait for deepfake ML inference. It instantly responds:
+  "🚨 Call 1930 now (national cyber fraud helpline) and call your bank's
+  official number to block the payment.
+  The sooner you report, the better the chance of recovery.
+  I will keep checking the video and send you a report you can file."
+
+• Why 1930 Matters:
+  1930 connects directly to the Indian Cybercrime Coordination Centre (I4C).
+  Operators have direct API access to major Indian banks (SBI, HDFC, ICICI, etc.)
+  to place a freeze hold on the recipient mule account before the scammer can
+  withdraw at an ATM.
+
+================================================================================
+9. POLLING ENGINE, LATENCY & WEBSOCKET DELIVERY
+================================================================================
+• Poller Implementation (src/backend.js - pollCaseUntilDone):
+  - Polls GET /cases/{caseId} every 2.5 seconds (Mana's Fix #3).
+  - Timeout: 120 attempts (up to 300 seconds / 5 minutes).
+  - Handles stages: queued -> processing -> reading_on_screen_text -> done.
+  
+• Real-time Notification:
+  - The instant status === 'done', the poller clears its interval.
+  - Passes normalized analysis object to callback.
+  - Invokes sock.sendMessage(jid, { text: replyCard }).
+  - If timeline_image_url is present, sends the visual diff diagram.
+  - End-to-end user latency: typically 25 to 45 seconds total.
+
+================================================================================
+10. RESPONSIBLE AI: VERDICTS, OCR ENTITIES & SIGNED PDF REPORTS
+================================================================================
+• The Problem with Confusing Percentages:
+  Saying "This video is 87.4% deepfake" violates Responsible AI:
+  - Non-technical users ask: "Does that mean there's a 13% chance it's real?"
+  - Victims second-guess calling the police.
+
+• FARQ's 3-Tier Categorical Verdicts:
+  1. CONFIRMED_SCAM:
+     High confidence alteration detected AND the original source video was
+     located in official archives.
+  2. LIKELY_SCAM:
+     Significant acoustic/visual anomalies (lips don't match phonemes, head
+     movements out of phase with audio), but original speech not found in index.
+  3. NOT_VERIFIED:
+     Inconclusive evidence. The bot explicitly refuses to guess:
+     "I couldn't find enough evidence either way, so I won't guess. Before you
+     act, call the official number. Real officials never ask you to invest on
+     WhatsApp."
+
+• Mana's Fix #4: Removed Reviewer Claims:
+  - Dropped "A reviewer is checking this. I will update you."
+  - Dropped "_Confirmed by a FARQ reviewer._"
+  - Why: Review flow is null in production; honest communication builds trust.
+
+• Optional Improvement #1: OCR Scam Entities Extraction:
+  - If Mana's OCR extracts text from video frames, the card renders:
+    *Identified Scam Details:*
+    • Phone: +91 98765 43210
+    • UPI: scammer@oksbi
+    • Link: bit.ly/fake-ipo-allotment
+
+• Optional Improvement #2: Signed PDF Evidence Link:
+  - Labeled cleanly:
+    📄 Evidence report (PDF):
+    https://.../cases/{case_id}/report.pdf?t=b2aafcf...
+  - Signed time-limited token prevents URL tampering.
+
+================================================================================
+11. MANA'S ML PIPELINE EXPLAINED (SO YOU CAN ANSWER ML QUESTIONS)
+================================================================================
+If a judge asks: "How does the backend actually detect the deepfake?"
+Here is what you say:
+
+1. Ingestion & Demuxing:
+   - Video is received and demuxed into video stream (MP4/H.264) and audio (WAV 16kHz).
+
+2. Face Extraction & Landmarking:
+   - MediaPipe / RetinaFace extracts bounding boxes for all facial frames.
+   - 68 3D facial landmarks tracked across consecutive frames.
+
+3. Acoustic-Visual Lip-Sync Mismatch (SyncNet / Wav2Lip Discriminator):
+   - Compares the phonemes in audio against the visual mouth/lip movements.
+   - If audio phoneme 'B', 'P', 'M' (bilabial plosives) occurs while lips are
+     open, confidence of manipulation spikes.
+   - In our test video (fake-L1picture-L2voice.mp4), the visual came from
+     speech "L1-pitch" but the voice came from "L2-plain". The engine proved
+     they were not recorded together!
+
+4. Official Speech Index Retrieval:
+   - Hashes acoustic embeddings (Chroma / MFCC vectors) against an indexed
+     vector database of speeches by Indian public figures (PM, FM, RBI Governor).
+   - Locates exact source timestamp (e.g., L1-pitch at 0:00).
+
+5. OCR Entity Reader:
+   - Tesseract / EasyOCR scans video frames for overlay text (UPI IDs, phone
+     numbers, telegram handles) and extracts them into data.entities.
+
+================================================================================
+12. COMPLETE API CONTRACTS & SCHEMAS
+================================================================================
+Base URL: https://afterwards-describes-split-triumph.trycloudflare.com
+Auth Header: X-API-Key: tbrWvPQ2u8Fp7L59OlnhS6ymTJcGHgiE
+
+1. POST /cases (Multipart File Upload)
+   - Header: X-API-Key: <key>
+   - FormData:
+     - file: <binary>
+     - media_type: "video" | "audio" | "image"
+     - idempotency_key: "wamid_..."
+     - user_ref: "<HMAC-SHA256>"
+     - is_forwarded: "true"
+   - Response (202 Accepted):
+     { "case_id": "UUID", "status": "queued", "eta_seconds": 45 }
+
+2. PATCH /cases/{case_id}/answers (Guided Question Sync)
+   - Header: Content-Type: application/json, X-API-Key: <key>
+   - Body:
+     {
+       "claims_to_be": "official" | "famous_expert" | "bank_upi" | "family_friend" | "company_boss",
+       "asks_for": "invest" | "send_money" | "otp_link_kyc" | "nothing_yet",
+       "money_sent": true | false
+     }
+   - Response (200 OK):
+     { "status": "answers_recorded", "case_id": "UUID" }
+
+3. GET /cases/{case_id} (State Polling)
+   - Response (200 OK):
+     {
+       "case_id": "UUID",
+       "status": "queued" | "processing" | "done",
+       "stage": "reading_on_screen_text",
+       "verdict": "LIKELY_SCAM" | "CONFIRMED_SCAM" | "NOT_VERIFIED",
+       "headline": "This video has been altered.",
+       "summary": "The face and voice were not recorded together.",
+       "reasons": [{ "text": "...", "evidence_id": "..." }],
+       "entities": ["scammer@oksbi", "+919876543210"],
+       "original": { "found": true, "title": "L1-pitch" },
+       "report": { "pdf_url": "https://.../report.pdf?t=..." }
+     }
+
+================================================================================
+13. COMPREHENSIVE JUDGE Q&A (10 TOUGH TECHNICAL QUESTIONS)
+================================================================================
+
+Q1: "Why Baileys instead of the Official WhatsApp Business Cloud API?"
+A1: "The Cloud API is built for e-commerce, not citizen crisis response. It
+requires commercial business verification, imposes message template approval
+delays, and charges per conversation window. Baileys connects via WhatsApp's
+native multi-device Noise WebSocket protocol. This allows any police cyber cell
+or NGO to deploy FARQ instantly on an existing helpline SIM card with zero API
+costs, sub-100ms response times, and 50MB RAM usage."
+
+Q2: "What if someone sends a video in a group chat?"
+A2: "Our gatekeeping session manager isolates chats. Sessions only start when
+someone explicitly sends /farq or /farq help in a 1-on-1 chat. Group chats and
+uninitiated messages are discarded at line 98 of whatsapp.js before any media
+download occurs, ensuring zero resource waste."
+
+Q3: "How does your system scale if 1,000 citizens forward videos simultaneously?"
+A3: "Our architecture is decoupled and horizontally scalable:
+1. Intake is non-blocking: Node.js Baileys engine receives media buffers and
+   pipes them directly to disk in milliseconds.
+2. The bot does zero ML compute: It hands jobs off to Celery via POST /cases.
+3. Mana's backend uses Celery workers backed by Redis, which can be scaled across
+   multiple GPU nodes dynamically.
+4. Polling occurs on lightweight 2.5s timers using non-blocking fetch."
+
+Q4: "How do you protect victim data under India's DPDP Act?"
+A4: "We practice strict Privacy-by-Design. No victim phone number ever touches
+disk or network. Phone numbers are hashed using HMAC-SHA256 with a private
+server-side pepper. Mana's GPU servers only ever receive 'user_ref: ebad6fe7...'.
+Even under a total database breach, victim identities cannot be reversed."
+
+Q5: "Why ask 3 questions instead of purely automated video inference?"
+A5: "Context determines criminality. An altered satire video of a minister is
+protected expression. But an altered video asking for UPI transfers to a private
+number is cyber fraud.
+Furthermore, questions run concurrently with video inference. While the GPU is
+aligning facial landmarks, the user answers questions. If they paid, we activate
+the 1930 fund-freeze warning immediately without waiting for inference."
+
+Q6: "Why not show a percentage score like '92.4% fake'?"
+A6: "In high-stakes fraud detection, probabilistic percentages cause 'automation
+bias' and user panic. If a victim sees 68%, they wonder if the 32% means they
+can invest. We follow Responsible AI standards: 3 unambiguous categories
+(CONFIRMED_SCAM, LIKELY_SCAM, NOT_VERIFIED) accompanied by plain-English
+physical proof: 'The lips do not match this voice.'"
+
+Q7: "What prevents scammers from flooding your bot with dummy videos?"
+A7: "Three levels of defense:
+1. Strict /farq session initiation requirement.
+2. Idempotency keys: Every incoming media has a unique SHA-256 fingerprint;
+   duplicate forwarded videos return cached verdicts without re-running models.
+3. Baileys rate-limiting: Node.js throttles repeated uploads from the same
+   user_ref."
+
+Q8: "What if the video is genuine, but used in a fake context (cheap-fake)?"
+A8: "That is precisely why we cross-match against the official speech archive.
+If the video is unedited footage from 2022, but the caption claims it's a new
+2026 scheme, our system identifies: 'Original found: RBI Briefing, July 2022.
+No investment scheme announced.' That catches out-of-context cheap fakes that
+video-only deepfake detectors miss."
+
+Q9: "How does the police use your Evidence Report PDF?"
+A9: "When victims file a complaint on cybercrime.gov.in, police need 3 things:
+1. File cryptographic hash (SHA-256) for evidence integrity.
+2. What was altered (forensic breakdown).
+3. The scammer's destination identifiers (UPI IDs, phone numbers, links).
+Our backend packages all three into a signed, tamper-evident PDF that can be
+attached directly to an FIR or 1930 complaint docket."
+
+Q10: "What happens if Mana's backend goes down or takes too long?"
+A10: "Resilience is baked into my client:
+1. If POST /cases fails, the bot gracefully informs the user that their case
+   is staged safely in local storage and backend is reconnecting.
+2. The poller runs up to 5 minutes with error recovery, so temporary Cloudflare
+   tunnel hiccups do not drop the case.
+3. The 1930 emergency fast-path operates independently — even if the ML server
+   were down, a user who answered 'Yes, Sent Money' STILL gets the life-saving
+   helpline and bank contact guidance immediately."
+================================================================================

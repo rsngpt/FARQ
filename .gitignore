@@ -1,1 +1,14 @@
 .DS_Store
+.env
+.env.*
+node_modules/
+dist/
+__pycache__/
+*.pyc
+venv/
+.venv/
+.wwebjs_auth/
+.wwebjs_cache/
+media_storage/*
+!media_storage/.gitkeep
+baileys_auth/
