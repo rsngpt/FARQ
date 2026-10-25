@@ -82,7 +82,8 @@ def run(client: httpx.Client, path: Path, timeout: float) -> tuple[str, str, flo
             "idempotency_key": f"testset-{path.stem}-{time.time_ns()}",
         }
         r = client.post("/cases", files={"file": (path.name, f)}, data=fields)
-    r.raise_for_status()
+    if r.status_code >= 400:  # e.g. 413 too large: record it as a result, keep going
+        return f"UPLOAD_{r.status_code}", "", time.perf_counter() - started
     case_id = r.json()["case_id"]
     while True:
         result = client.get(f"/cases/{case_id}").json()
