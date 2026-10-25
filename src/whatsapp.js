@@ -16,6 +16,8 @@ const crypto = require('./crypto');
 const questions = require('./questions');
 const help = require('./help');
 const interactive = require('./interactive');
+const imageCard = require('./image_card');
+const fs = require('fs');
 
 let currentSock = null;
 
@@ -81,8 +83,8 @@ async function connectToWhatsApp() {
 
             const userRef = crypto.getUserRef(jid);
 
-            // Extract selected option ID or text from interactive UI / text
-            const selection = (interactive.extractUserSelection(msg) || '').trim();
+            // Extract selected option ID or text from interactive UI / text / poll votes
+            const selection = (interactive.extractUserSelection(msg, sock, jid) || '').trim();
             const lower = selection.toLowerCase();
 
             // Detect media presence
@@ -192,7 +194,9 @@ Type */farq* anytime to reactivate.`
                         // 1930 Cyber Fraud Emergency fast-path (Section 6.4)
                         await sock.sendMessage(jid, { text: qRes.emergencyAlert });
                     } else if (qRes.nextPayload) {
-                        if (qRes.nextPayload.type === 'list') {
+                        if (qRes.nextPayload.type === 'poll') {
+                            await interactive.sendPoll(sock, jid, qRes.nextPayload, userRef, qRes.nextPayload.step);
+                        } else if (qRes.nextPayload.type === 'list') {
                             await interactive.sendOptionList(sock, jid, qRes.nextPayload);
                         } else if (qRes.nextPayload.type === 'buttons') {
                             await interactive.sendQuickButtons(sock, jid, qRes.nextPayload);
@@ -213,7 +217,9 @@ Type */farq* anytime to reactivate.`
                         if (qRes.emergencyAlert) {
                             await sock.sendMessage(jid, { text: qRes.emergencyAlert });
                         } else if (qRes.nextPayload) {
-                            if (qRes.nextPayload.type === 'list') {
+                            if (qRes.nextPayload.type === 'poll') {
+                                await interactive.sendPoll(sock, jid, qRes.nextPayload, userRef, qRes.nextPayload.step);
+                            } else if (qRes.nextPayload.type === 'list') {
                                 await interactive.sendOptionList(sock, jid, qRes.nextPayload);
                             } else if (qRes.nextPayload.type === 'buttons') {
                                 await interactive.sendQuickButtons(sock, jid, qRes.nextPayload);
@@ -301,9 +307,22 @@ Type */farq* anytime to reactivate.`
 
                     // 2. Poll GET /cases/{case_id} every 2-3s and show result as soon as status is 'done' (Fix 3)
                     backend.pollCaseUntilDone(backendUuid, async (analysis) => {
-                        console.log(`[VERDICT READY] Case ${backendUuid} status is DONE. Delivering immediately to WhatsApp!`);
-                        const replyCard = backend.formatVerdict(analysis, job);
-                        await sock.sendMessage(jid, { text: replyCard });
+                        console.log(`[VERDICT READY] Case ${backendUuid} status is DONE. Generating visual verdict image...`);
+
+                        // 1. Generate visual verdict PNG image card (A HUGE SCAM ALERT / FOCUS INSURED / NO SCAM FOUND)
+                        const cardImagePath = await imageCard.generateCardImage(analysis);
+                        const simplifiedText = backend.formatSimplifiedVerdict(analysis, job);
+
+                        if (cardImagePath && fs.existsSync(cardImagePath)) {
+                            console.log(`[SENDING VERDICT IMAGE] ${cardImagePath}`);
+                            await sock.sendMessage(jid, {
+                                image: { url: cardImagePath },
+                                caption: simplifiedText
+                            });
+                        } else {
+                            const replyCard = backend.formatVerdict(analysis, job);
+                            await sock.sendMessage(jid, { text: replyCard });
+                        }
 
                         if (analysis.timeline_image_url) {
                             try {
@@ -315,7 +334,7 @@ Type */farq* anytime to reactivate.`
                                 console.warn('[TIMELINE IMAGE ERROR]', err.message);
                             }
                         }
-                        console.log(`[REPLIED] Sent verdict for case ${backendUuid} (${analysis.verdict})`);
+                        console.log(`[REPLIED] Sent visual verdict for case ${backendUuid} (${analysis.verdict})`);
                         console.log(`======================================================\n`);
                     }, (err) => {
                         console.error(`[POLLER ERROR] Case ${backendUuid}:`, err.message);
@@ -325,9 +344,13 @@ Type */farq* anytime to reactivate.`
                 console.error(`[BACKEND UPLOAD ERROR] Case ${caseId}:`, err.message);
             });
 
-            // 2. Concurrently start Guided Questions (Zero delay!)
+            // 2. Concurrently start Guided Questions as Native WhatsApp Poll (Zero delay!)
             const q1Payload = questions.start(userRef, caseId);
-            await interactive.sendOptionList(sock, jid, q1Payload);
+            if (q1Payload.type === 'poll') {
+                await interactive.sendPoll(sock, jid, q1Payload, userRef, 1);
+            } else {
+                await interactive.sendOptionList(sock, jid, q1Payload);
+            }
             console.log(`======================================================\n`);
         }
     });

@@ -26,7 +26,7 @@ async function checkHealth() {
  * Immediate Upload: POST /cases as soon as media arrives (Fix 1)
  * Returns { case_id, status }
  */
-async function createCase(job) {
+async function createCase(job, retries = 2) {
     const baseUrl = config.backend.baseUrl.replace(/\/api\/deepfake\/analyze$/, '');
     const targetUrl = `${baseUrl}/cases`;
 
@@ -89,6 +89,11 @@ async function createCase(job) {
 
         if (!response.ok) {
             const errText = await response.text();
+            if ((response.status === 502 || response.status === 503 || response.status === 504) && retries > 0) {
+                console.warn(`[BACKEND RETRY] HTTP ${response.status} from tunnel. Retrying in 2s... (${retries} left)`);
+                await new Promise(r => setTimeout(r, 2000));
+                return await createCase(job, retries - 1);
+            }
             throw new Error(`HTTP ${response.status}: ${errText}`);
         }
 
@@ -96,6 +101,11 @@ async function createCase(job) {
         return data; // { case_id: "...", status: "queued", eta_seconds: ... }
     } catch (err) {
         clearTimeout(timer);
+        if (retries > 0 && (err.name === 'AbortError' || (err.message && err.message.includes('fetch failed')))) {
+            console.warn(`[BACKEND RETRY] Network glitch: ${err.message}. Retrying in 2s... (${retries} left)`);
+            await new Promise(r => setTimeout(r, 2000));
+            return await createCase(job, retries - 1);
+        }
         console.error(`[BACKEND CREATE CASE ERROR] ${err.message}`);
         throw err;
     }
@@ -304,10 +314,39 @@ I couldn't find enough evidence either way, so I won't guess.${reasonsText}${ent
 *Before you act:* call the official number of the person or organisation (from their website, not from the video). Real officials never ask you to invest through WhatsApp or pay a stranger's UPI ID.`;
 }
 
+/**
+ * Ultra-concise verdict caption to accompany the visual verdict card image
+ */
+function formatSimplifiedVerdict(analysis, job) {
+    const verdict = (analysis.verdict || 'NOT_VERIFIED').toUpperCase();
+    const isScam = verdict === 'CONFIRMED_SCAM' || verdict === 'LIKELY_SCAM';
+    const isSafe = verdict === 'SAFE' || verdict === 'GENUINE' || verdict === 'AUTHENTIC';
+
+    const pdfLine = analysis.report?.pdf_url
+        ? `\n📄 *Evidence report (PDF):* ${analysis.report.pdf_url}`
+        : '';
+
+    if (isScam) {
+        return `🚨 *A HUGE SCAM ALERT*
+• Altered video: face and voice were not recorded together.
+• If you sent money, call *1930* immediately to freeze funds!${pdfLine}`;
+    }
+
+    if (isSafe) {
+        return `🛡️ *NO SCAM FOUND*
+• No video or voice manipulation detected.${pdfLine}`;
+    }
+
+    // Default: NOT_VERIFIED / FOCUS INSURED
+    return `⚠️ *FOCUS INSURED / NOT VERIFIED*
+• Inconclusive evidence. Never send money to strangers or WhatsApp trading tips!${pdfLine}`;
+}
+
 module.exports = {
     checkHealth,
     createCase,
     pollCaseUntilDone,
     patchAnswers,
-    formatVerdict
+    formatVerdict,
+    formatSimplifiedVerdict
 };

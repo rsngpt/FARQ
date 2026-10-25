@@ -45,69 +45,46 @@ class GuidedQuestionsManager {
 
     getQuestion1Payload() {
         return {
-            type: 'list',
-            title: 'FARQ Deepfake Verification',
-            body: 
-`⏳ *Got it. Checking this now, usually under a minute.*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Two quick questions to help narrow down official archives:
-
-*1. Who is it claiming to be?*`,
-            footer: 'Question 1 of 3 • FARQ',
-            buttonText: '👤 Select Category',
-            sections: [
-                {
-                    title: 'Claimed Identity',
-                    rows: [
-                        { id: 'ans_official', title: '🏛️ Govt / RBI / Official', description: 'FM, RBI Governor, SEBI, Police' },
-                        { id: 'ans_famous', title: '🌟 Famous Person / Expert', description: 'Celebrity, business leader, analyst' },
-                        { id: 'ans_bank', title: '🏦 Bank or UPI App', description: 'SBI, HDFC, Paytm, PhonePe' },
-                        { id: 'ans_family', title: '👥 Family or Friend', description: 'Urgent loan or medical emergency' },
-                        { id: 'ans_boss', title: '🏢 Company or Boss', description: 'CEO, manager, HR request' },
-                        { id: 'ans_not_sure', title: '❓ Not Sure', description: 'Uncertain or anonymous sender' }
-                    ]
-                }
-            ]
+            type: 'poll',
+            step: 1,
+            name: '🏛️ 1. Who is it claiming to be?',
+            values: [
+                '🏛️ Govt / RBI / Police',
+                '🌟 Famous Person / Expert',
+                '🏦 Bank or UPI App',
+                '👥 Family or Friend',
+                '🏢 Company or Boss',
+                '❓ Not Sure'
+            ],
+            selectableCount: 1
         };
     }
 
     getQuestion2Payload() {
         return {
-            type: 'list',
-            title: 'FARQ Deepfake Verification',
-            body: 
-`*2. What do they want you to do?*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Select the action requested in the media:`,
-            footer: 'Question 2 of 3 • FARQ',
-            buttonText: '🎯 Select Action',
-            sections: [
-                {
-                    title: 'Requested Action',
-                    rows: [
-                        { id: 'ans_invest', title: '📈 Invest in Trading App', description: 'Stock platform, crypto, VIP tips' },
-                        { id: 'ans_money', title: '💸 Send Money / Transfer', description: 'UPI, wire, security deposit' },
-                        { id: 'ans_otp', title: '🔑 OTP, Link or KYC', description: 'Login link, verify Aadhaar' },
-                        { id: 'ans_nothing', title: '⏳ Nothing Yet', description: 'Just chatting or general video' }
-                    ]
-                }
-            ]
+            type: 'poll',
+            step: 2,
+            name: '📈 2. What do they want you to do?',
+            values: [
+                '📈 Invest in Trading App',
+                '💸 Send Money / Transfer',
+                '🔑 OTP, Link or KYC',
+                '⏳ Nothing Yet'
+            ],
+            selectableCount: 1
         };
     }
 
     getQuestion3Payload() {
         return {
-            type: 'buttons',
-            title: 'FARQ Security Check',
-            body: 
-`*3. Have you already sent any money?*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-If you have paid, we can activate instant emergency fund freeze steps.`,
-            footer: 'Final Question • FARQ',
-            buttons: [
-                { id: 'ans_yes', text: '🚨 Yes, Sent Money' },
-                { id: 'ans_no', text: '🛡️ Not Yet' }
-            ]
+            type: 'poll',
+            step: 3,
+            name: '🚨 3. Have you already sent any money?',
+            values: [
+                '🚨 Yes, Sent Money',
+                '🛡️ Not Yet'
+            ],
+            selectableCount: 1
         };
     }
 
