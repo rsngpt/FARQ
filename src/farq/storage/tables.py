@@ -77,8 +77,10 @@ class EvidenceRow(Base):
     reason: Mapped[str] = mapped_column(Text)
     level: Mapped[str | None] = mapped_column(String(8))
     human_reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
-    model_name: Mapped[str | None] = mapped_column(String(128))
-    model_version: Mapped[str | None] = mapped_column(String(64))
+    # Text, not a short VARCHAR: a 68-character version label crashed a case on
+    # Postgres (SQLite in the tests doesn't enforce lengths).
+    model_name: Mapped[str | None] = mapped_column(Text)
+    model_version: Mapped[str | None] = mapped_column(Text)
     details: Mapped[dict[str, Any]]
     created_at: Mapped[datetime]
 
@@ -92,8 +94,8 @@ class ArtifactRow(Base):
     kind: Mapped[str] = mapped_column(String(32))
     storage_key: Mapped[str | None] = mapped_column(String(255))
     data: Mapped[dict[str, Any]]
-    model_name: Mapped[str | None] = mapped_column(String(128))
-    model_version: Mapped[str | None] = mapped_column(String(64))
+    model_name: Mapped[str | None] = mapped_column(Text)
+    model_version: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime]
 
 

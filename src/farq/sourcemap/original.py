@@ -272,4 +272,5 @@ def analyse_segment(
         "samples": samples,
         "thresholds": {"medium": RATIO_MEDIUM, "high": RATIO_HIGH, "status": "provisional"},
         "face_model": f"{finder.name} {finder.version}",
+        "face_model_version": finder.version,
     }

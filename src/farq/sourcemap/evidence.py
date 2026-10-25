@@ -66,8 +66,8 @@ def source_evidence(data: dict[str, Any]) -> list[Evidence]:
         altered = comp.get("altered") or []
         when = (f"from {clock(altered[0]['start'])} to {clock(altered[-1]['end'])}"
                 if altered else "in places")  # fmt: skip
-        model = {"model_name": "mouth-vs-face ratio",
-                 "model_version": comp.get("face_model")}  # fmt: skip
+        model = {"model_name": "mouth-vs-face ratio (MediaPipe Face Landmarker)",
+                 "model_version": comp.get("face_model_version")}  # fmt: skip
         if level == "high":
             out.append(Evidence(
                 stage="source_map", type="mouth_altered", source_type=SourceType.MODEL,
