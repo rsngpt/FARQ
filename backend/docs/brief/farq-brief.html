@@ -1,0 +1,394 @@
+<title>FARQ Preliminary Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single reading column styled like an investigator's case file —
+   evidence IDs in mono, verdict tiers as coloured chips, tables for tools. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #16202c;
+  --muted: #5a6676;
+  --rule: #d9dee6;
+  --accent: #0f5e6b;
+  --accent-soft: #e2f0f1;
+  --scam: #a3261b;
+  --scam-soft: #fbe9e6;
+  --likely: #8a5a00;
+  --likely-soft: #fdf1d8;
+  --unverified: #3d4a5c;
+  --unverified-soft: #e8ecf1;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #161e27; --ink: #e6ebf1; --muted: #9aa6b5; --rule: #2a3542;
+    --accent: #5fc1cf; --accent-soft: #15333a;
+    --scam: #ff8a7d; --scam-soft: #3a1b18; --likely: #f2c060; --likely-soft: #3a2d10;
+    --unverified: #b9c4d2; --unverified-soft: #232e3b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #161e27; --ink: #e6ebf1; --muted: #9aa6b5; --rule: #2a3542;
+  --accent: #5fc1cf; --accent-soft: #15333a;
+  --scam: #ff8a7d; --scam-soft: #3a1b18; --likely: #f2c060; --likely-soft: #3a2d10;
+  --unverified: #b9c4d2; --unverified-soft: #232e3b;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--body);
+}
+.page {
+  max-width: 54rem;
+  margin: 0 auto;
+  padding-block: 2.5rem 4rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 3rem;
+}
+h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.4rem, 7vw, 3.6rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; font-weight: 700; }
+h3 { font-size: 1.15rem; font-weight: 500; }
+p { margin: 0; max-width: 65ch; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+.eyebrow {
+  font: 600 0.78rem/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+section { display: grid; gap: 1rem; }
+.lede { font-size: 1.25rem; color: var(--ink); }
+.muted { color: var(--muted); }
+
+header { display: grid; gap: 1rem; padding-bottom: 2rem; border-bottom: 1px solid var(--rule); }
+.meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; color: var(--muted); font-size: 0.95rem; }
+
+.chip {
+  display: inline-block;
+  font: 600 0.75rem/1 var(--mono);
+  letter-spacing: 0.05em;
+  padding: 0.4em 0.6em;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.chip.scam { color: var(--scam); background: var(--scam-soft); }
+.chip.likely { color: var(--likely); background: var(--likely-soft); }
+.chip.unverified { color: var(--unverified); background: var(--unverified-soft); }
+.chip.done { color: var(--accent); background: var(--accent-soft); }
+.chip.next { color: var(--likely); background: var(--likely-soft); }
+.chip.plan { color: var(--muted); background: var(--unverified-soft); }
+
+.questions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1rem; }
+.q {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.4rem;
+  align-content: start;
+  min-width: 0;
+}
+.q .num { font: 600 0.8rem/1 var(--mono); color: var(--accent); }
+
+ol.flow { margin: 0; padding-left: 1.4rem; display: grid; gap: 0.5rem; max-width: 65ch; }
+ol.flow li::marker { font-family: var(--mono); color: var(--accent); }
+
+.reply {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--scam);
+  border-radius: 6px;
+  padding: 1rem 1.2rem;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 65ch;
+}
+.note { font-size: 0.9rem; color: var(--muted); }
+
+/* Illustrative source map strip */
+.timeline { display: grid; gap: 0.35rem; max-width: 40rem; }
+.track { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.6rem; align-items: center; font-size: 0.85rem; }
+.track .label { font-family: var(--mono); color: var(--muted); }
+.bar { display: flex; height: 1.6rem; border-radius: 4px; overflow: hidden; border: 1px solid var(--rule); }
+.seg { display: flex; align-items: center; padding: 0 0.4rem; font: 600 0.7rem/1 var(--mono); white-space: nowrap; overflow: hidden; min-width: 0; }
+.seg + .seg { border-left: 2px solid var(--bg); }
+.seg.a { background: var(--accent-soft); color: var(--accent); }
+.seg.b { background: var(--unverified-soft); color: var(--unverified); }
+.seg.x { background: var(--scam-soft); color: var(--scam); }
+.axis { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.6rem; font: 0.72rem/1 var(--mono); color: var(--muted); }
+.axis div:last-child { display: flex; justify-content: space-between; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 40rem; font-size: 0.95rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--rule); }
+th { font: 600 0.75rem/1.2 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.group { font: 600 0.78rem/1.2 var(--mono); color: var(--accent); background: var(--accent-soft); letter-spacing: 0.04em; text-transform: uppercase; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+
+.novel { display: grid; gap: 1.25rem; }
+.novel article { display: grid; gap: 0.4rem; padding-left: 1rem; border-left: 2px solid var(--rule); }
+.novel .prior { font-size: 0.92rem; color: var(--muted); max-width: 65ch; }
+
+ul.plain { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.4rem; max-width: 65ch; }
+
+.status { display: grid; gap: 0.6rem; }
+.status-row { display: grid; grid-template-columns: 3rem 6rem 1fr; gap: 0.8rem; align-items: baseline; }
+.status-row .m { font: 600 0.9rem/1 var(--mono); }
+@media (max-width: 480px) {
+  .status-row { grid-template-columns: 2.6rem 1fr; }
+  .status-row .chip { grid-column: 2; justify-self: start; }
+  .status-row p { grid-column: 1 / -1; }
+}
+
+details { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 0.8rem 1rem; }
+details + details { margin-top: 0.6rem; }
+summary { cursor: pointer; font-weight: 600; }
+summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+details p { margin-top: 0.6rem; }
+
+dl.gloss { display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr; gap: 0.5rem 1.2rem; margin: 0; }
+dl.gloss dt { font-weight: 600; }
+dl.gloss dd { margin: 0; color: var(--ink); }
+@media (max-width: 560px) { dl.gloss { grid-template-columns: 1fr; } dl.gloss dd { margin-bottom: 0.6rem; } }
+
+footer { border-top: 1px solid var(--rule); padding-top: 1.2rem; font-size: 0.9rem; color: var(--muted); }
+</style>
+
+<div class="page">
+
+<header>
+  <span class="eyebrow">Preliminary review · Track 3 · Team Off-Grid</span>
+  <h1>FARQ</h1>
+  <p class="lede">A WhatsApp service that checks a suspicious financial video against its sources before you act on it, and tells you in plain words what it found.</p>
+  <div class="meta">
+    <span>Amazon AI Cyber Security Hackathon finale</span>
+    <span>Status as of 24 Oct 2026</span>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">The problem</span>
+  <h2>Investment scams that borrow real faces and real voices</h2>
+  <p>Scammers in India circulate videos of public figures, such as the Finance Minister or the RBI Governor, appearing to recommend an investment scheme. PIB Fact Check has reported that recent fakes are collages: the official's real face, a voice taken from other real videos, and AI used only to re-sync the lips <span class="muted">(team to attach the PIB source)</span>.</p>
+  <p>Because most of the pixels and most of the voice are genuine, a detector that looks for synthetic pixels has little to find. Our working hypothesis, which the demo and our test set will check, is that generic detectors often pass these videos.</p>
+</section>
+
+<section>
+  <span class="eyebrow">The idea</span>
+  <h2>Verify against sources, not only pixels</h2>
+  <p>Instead of asking only "does this look fake?", FARQ asks four questions and shows the evidence for each:</p>
+  <div class="questions">
+    <div class="q"><span class="num">Q1 · Source map</span><h3>Where did every second come from?</h3><p class="muted">Match video segments against official footage, and spoken phrases against the person's real speeches, with timestamps.</p></div>
+    <div class="q"><span class="num">Q2 · Original + diff</span><h3>What changed from the original?</h3><p class="muted">Align the found original, compare the mouth with the rest of the face, and diff the transcripts.</p></div>
+    <div class="q"><span class="num">Q3 · Binding</span><h3>Do this voice and this body belong together?</h3><p class="muted">Check whether vocal emphasis lines up with head and eyebrow movement, ignoring the mouth.</p></div>
+    <div class="q"><span class="num">Q4 · Supporting signals</span><h3>What else points to a scam?</h3><p class="muted">Known-fake matches, scam-script matches, official warning lists, and phone numbers, UPI IDs and links shown or spoken.</p></div>
+  </div>
+  <p>An investigator agent (Claude on Amazon Bedrock) then writes a short report from these findings. Every sentence cites an evidence ID. The agent never sets the verdict.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Illustration, not real output</span>
+  <h3>What a source map shows</h3>
+  <div class="timeline" role="img" aria-label="Illustrative source map: the video track comes from an official speech throughout, while the audio track switches between two other speeches, with the mouth region altered in the middle section.">
+    <div class="track"><span class="label">video</span><div class="bar"><div class="seg a" style="flex:100">Budget speech, 12:04–12:44</div></div></div>
+    <div class="track"><span class="label">speech</span><div class="bar"><div class="seg b" style="flex:30">Interview A</div><div class="seg b" style="flex:45">Press conf. B</div><div class="seg x" style="flex:25">no source</div></div></div>
+    <div class="track"><span class="label">mouth</span><div class="bar"><div class="seg a" style="flex:10">same</div><div class="seg x" style="flex:88">altered 0:04–0:39</div><div class="seg a" style="flex:2"></div></div></div>
+    <div class="axis"><div></div><div><span>0:00</span><span>0:20</span><span>0:40</span></div></div>
+  </div>
+  <p class="note">Face and voice are both real, but they were not recorded together. That is the kind of explanation a user can understand and an investigator can check.</p>
+</section>
+
+<section>
+  <span class="eyebrow">How a check works</span>
+  <h2>From a forwarded video to a verdict</h2>
+  <ol class="flow">
+    <li>The user forwards the video, voice note or screenshot to the FARQ bot on WhatsApp (Telegram as a second channel).</li>
+    <li>Three fixed buttons ask who it claims to be, what it asks for, and whether money was already sent. If money was sent, the reply leads with <strong>call 1930</strong> (National Cyber Crime Helpline) and bank steps.</li>
+    <li>Fast lookup: if a reviewer has already confirmed this exact video, the answer comes back immediately.</li>
+    <li>Extract: on-screen text first (OCR), then speech-to-text with word timings.</li>
+    <li>Verify: source map, original and diff, official lists.</li>
+    <li>Analyse: audio-visual binding and an audio deepfake score, each turned into a level (low, medium or high).</li>
+    <li>Decide: a rules file sets the verdict from the evidence. Weak or conflicting evidence gives NOT VERIFIED.</li>
+    <li>Reply: the verdict, two to four plain reasons, next steps, and a timeline image. On request, a pre-filled complaint and an evidence PDF for the user to file on cybercrime.gov.in.</li>
+  </ol>
+  <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+    <span class="chip scam">CONFIRMED SCAM · only after human review</span>
+    <span class="chip likely">LIKELY SCAM · goes to a reviewer</span>
+    <span class="chip unverified">NOT VERIFIED · never "genuine"</span>
+  </div>
+  <p class="eyebrow" style="margin-top:0.5rem">Target demo reply (planned wording)</p>
+  <div class="reply">Verdict: LIKELY SCAM
+Altered. Face and voice are both hers, but they weren't recorded together.
+
+Why:
+- The video matches her 3 March talk (0:00–0:40). [ev_…]
+- The words come from two other recordings. [ev_…]
+- Her lips were changed from 0:04 to 0:39; the rest of her face was not. [ev_…]
+
+Do not send money or share OTPs. To report it, call 1930 or go to cybercrime.gov.in.</div>
+  <p class="note">The demo uses a consenting team member as the protected person. Test fakes are made on-site from team clips only.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Tools and what each does</span>
+  <h2>Every model and service, by job</h2>
+  <p>All models are pre-trained and declared, used as frozen feature extractors where possible, and run on one laptop GPU (RTX 4050, 6 GB), one large model at a time.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Tool</th><th>What it does in FARQ</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="group" colspan="3">Reaching people</td></tr>
+        <tr><td>WhatsApp Cloud API (pywa)</td><td>Receives forwarded media; replies with buttons, text and images.</td><td><span class="chip plan">planned</span></td></tr>
+        <tr><td>Telegram Bot API</td><td>Second channel, and the reviewer's Confirm / Reject buttons.</td><td><span class="chip plan">planned</span></td></tr>
+        <tr><td class="group" colspan="3">Reading the file</td></tr>
+        <tr><td>FFmpeg / ffprobe</td><td>Checks the file is real media; extracts one frame per second with timestamps and 16 kHz mono audio.</td><td><span class="chip next">building (M2)</span></td></tr>
+        <tr><td>PaddleOCR</td><td>Reads on-screen text in English and Hindi: phone numbers, UPI IDs, links, return promises.</td><td><span class="chip next">building (M2)</span></td></tr>
+        <tr><td>Whisper large-v3-turbo (faster-whisper)</td><td>Transcribes speech with a timestamp for every word. We convert OpenAI's official weights ourselves and run them in 8-bit to fit the GPU.</td><td><span class="chip next">building (M2)</span></td></tr>
+        <tr><td>Silero VAD</td><td>Finds where someone is speaking, so silence is skipped.</td><td><span class="chip next">building (M2)</span></td></tr>
+        <tr><td class="group" colspan="3">Finding sources</td></tr>
+        <tr><td>vpdq / pdqhash (Meta)</td><td>Fingerprints video frames so re-encoded copies still match: known-fake lookup and locating official source footage.</td><td><span class="chip plan">M2–M3</span></td></tr>
+        <tr><td>BGE-M3</td><td>Multilingual text embeddings: matches spoken phrases to real speeches and scam scripts across languages (with exact n-gram search).</td><td><span class="chip plan">M3</span></td></tr>
+        <tr><td>CLIP ViT-L/14</td><td>Frame embeddings for visual search when fingerprints miss, for example after cropping or overlays.</td><td><span class="chip plan">M3</span></td></tr>
+        <tr><td>Postgres + pgvector</td><td>Stores cases, evidence and embeddings, and searches the embeddings.</td><td><span class="chip done">in use</span></td></tr>
+        <tr><td class="group" colspan="3">Checking the person</td></tr>
+        <tr><td>MediaPipe Face Landmarker</td><td>Face landmarks per frame: head pose and eyebrow height for binding, and the mouth region for the diff.</td><td><span class="chip plan">M3–M4</span></td></tr>
+        <tr><td>librosa (pYIN)</td><td>Pitch and loudness over time, to find vocal emphasis. A signal-processing library, not a model.</td><td><span class="chip plan">M4</span></td></tr>
+        <tr><td>WavLM Base+ / wav2vec2 XLS-R 300M</td><td>Frozen audio features for a small audio-deepfake head, and for the learned version of binding.</td><td><span class="chip plan">M4</span></td></tr>
+        <tr><td class="group" colspan="3">Deciding and reporting</td></tr>
+        <tr><td>Rules engine (YAML, ours)</td><td>Sets the verdict from evidence; refuses to load if a CONFIRMED rule skips human review.</td><td><span class="chip done">in use</span></td></tr>
+        <tr><td>Claude on Amazon Bedrock</td><td>Investigator agent: calls our functions as tools and writes the narrative, citing evidence IDs. Never sets the verdict.</td><td><span class="chip plan">M5</span></td></tr>
+        <tr><td>WeasyPrint, matplotlib</td><td>Evidence PDF with SHA-256 hashes and timestamps; timeline chart image.</td><td><span class="chip plan">M5</span></td></tr>
+        <tr><td>RBI Alert List, NSE caution notices, SEBI</td><td>Public warning lists to check names, numbers, UPI IDs and links against.</td><td><span class="chip plan">M3</span></td></tr>
+        <tr><td class="group" colspan="3">Running it</td></tr>
+        <tr><td>FastAPI, Celery + Redis</td><td>Receives messages and returns fast; workers on separate io, cpu and gpu queues do the heavy work.</td><td><span class="chip done">in use</span></td></tr>
+        <tr><td>SeaweedFS (S3-compatible)</td><td>Stores the media files. Replaces MinIO, whose images were removed from Docker Hub.</td><td><span class="chip done">in use</span></td></tr>
+        <tr><td>Docker Compose, uv, Alembic</td><td>One-command setup, Python packages, database migrations.</td><td><span class="chip done">in use</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Also declared but not in the current plan: AV-HuBERT, IndicTrans2, Sarvam AI, Google Fact Check Tools and Cloud Vision.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Novelty</span>
+  <h2>What is new, and what it builds on</h2>
+  <div class="novel">
+    <article>
+      <h3>1. Source attribution instead of a single fake score</h3>
+      <p>FARQ explains where each second of video and each spoken phrase came from. For collage fakes, the strongest evidence is a real source used out of context, and that evidence can be checked by anyone.</p>
+      <p class="prior">Builds on: the manual reverse-search work fact-checkers already do. New for us: doing it automatically, per second, for both picture and speech, in Indian languages.</p>
+    </article>
+    <article>
+      <h3>2. Locating the lip-sync edit</h3>
+      <p>Once the original is found and aligned, compression changes the whole face about equally, while lip-sync concentrates change in the mouth. Comparing the two gives "lips altered 0:04–0:39", plus a word-level diff of what was said.</p>
+    </article>
+    <article>
+      <h3>3. Mouth-blind audio-visual binding</h3>
+      <p>The attacker optimises the mouth to match the new audio. We deliberately ignore the mouth and test what they don't optimise: whether vocal emphasis (pitch and loudness) moves with head nods and eyebrow raises, calibrated against the person's own real clips.</p>
+      <p class="prior">Builds on: Agarwal and Farid, "Protecting World Leaders Against Deep Fakes" (CVPR Workshops 2019), which modelled a person's facial and head mannerisms; and Chugh et al., "Not made for each other" (ACM Multimedia 2020), on audio-visual mismatch. Difference: we exclude the forged region and target the coupling between voice and upper-face movement.</p>
+    </article>
+    <article>
+      <h3>4. The knockout test</h3>
+      <p>When the original is found, we pair the fake's body movement with the original audio. If the coupling jumps, the body belongs to other words. It is a cause-and-effect check that a non-expert audience can watch happen.</p>
+    </article>
+    <article>
+      <h3>5. Evidence decides; the AI only explains</h3>
+      <p>A rules file sets the verdict; the language model only narrates, and must cite evidence IDs. FARQ abstains when evidence is weak, never calls a video genuine, and only says CONFIRMED after a person reviews it.</p>
+    </article>
+    <article>
+      <h3>6. Built around the victim's next step</h3>
+      <p>It works inside WhatsApp, where these videos spread. If money was sent, 1930 comes first. It produces a police-ready evidence pack that the user files themselves, and it groups repeat forwards of the same fake into campaigns.</p>
+    </article>
+  </div>
+  <p class="note">Novelty claims 1, 2 and 4 are our assessment; a literature check before the final slides is on our to-do list.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Safety and honesty rules</span>
+  <h2>How FARQ avoids doing harm</h2>
+  <ul class="plain">
+    <li>Never decides on a single weak signal; strong signals must come from two different kinds of source.</li>
+    <li>Never auto-blocks or auto-reports; the user stays in control.</li>
+    <li>Shows reasons and a level (low, medium, high), never raw scores. Levels are percentiles against the person's own genuine clips, worded honestly for the number of clips we have.</li>
+    <li>Every verdict and reviewer action is logged: who, when, which evidence, which model versions.</li>
+    <li>Data: public, synthetic or consented team data only. Phone numbers are stored only as keyed hashes.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Where we are</span>
+  <h2>Build status</h2>
+  <div class="status">
+    <div class="status-row"><span class="m">M1</span><span class="chip done">done</span><p>Intake, case file and evidence model, database, rules engine, audit log, latency endpoint. Verified end to end on the running stack with a synthetic clip.</p></div>
+    <div class="status-row"><span class="m">M2</span><span class="chip next">in progress</span><p>Ingest, OCR, Whisper, entity extraction, known-fake hash.</p></div>
+    <div class="status-row"><span class="m">M3</span><span class="chip plan">planned</span><p>Source map and find-the-original diff.</p></div>
+    <div class="status-row"><span class="m">M4</span><span class="chip plan">planned</span><p>Audio-visual binding v1 and the audio deepfake head.</p></div>
+    <div class="status-row"><span class="m">M5</span><span class="chip plan">planned</span><p>Investigator report, reviewer flow, police report.</p></div>
+    <div class="status-row"><span class="m">M6</span><span class="chip plan">planned</span><p>Test-set run with measured results, and demo polish.</p></div>
+  </div>
+  <p><strong>Accuracy and speed: PENDING.</strong> No detection results exist yet; they will come from the M6 test set, reported with its size. Targets: under 10 seconds for a known fake, under 60 seconds for a new video.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Limits</span>
+  <h2>What FARQ can't do yet</h2>
+  <ul class="plain">
+    <li>The source map only finds sources that are in our library. A fake built from footage we don't have falls back to binding and the supporting signals.</li>
+    <li>Per-person calibration needs genuine clips of that person. For people outside the library, levels are less certain.</li>
+    <li>A fully synthetic video, with no reused footage, removes the source evidence; binding and the audio head still apply.</li>
+    <li>An attacker could learn to fake head and eyebrow movement that matches the voice. Binding raises the cost; it does not end the arms race.</li>
+    <li>Transcription quality on mixed Hindi and English is unmeasured until M2 testing.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">For study</span>
+  <h2>Questions a judge may ask</h2>
+  <details><summary>Why not just use a deepfake classifier?</summary><p>Collage fakes are mostly real pixels and real voice, so a classifier has little synthetic signal to find. We test the relationships between the parts instead: their sources, whether they were recorded together, and what changed. We'll show a generic detector on the same fake in the demo, using a real run.</p></details>
+  <details><summary>What if the original isn't in your library?</summary><p>Then binding, the audio score, scam-script matching and the warning lists still run. If the evidence stays weak, FARQ says NOT VERIFIED, lists any warning signs, and gives the helpline. It never guesses and never says "genuine".</p></details>
+  <details><summary>Couldn't the AI make a wrong accusation?</summary><p>The language model can't set the verdict. A rules file does, from logged evidence, and CONFIRMED needs a human reviewer. The model only writes the explanation and must cite evidence IDs.</p></details>
+  <details><summary>How accurate is it?</summary><p>We don't know yet, and we won't claim a number before we measure one. Results will come from the M6 test set and will be reported with its size.</p></details>
+  <details><summary>What about privacy?</summary><p>Phone numbers are stored as keyed hashes, never in raw form. We use only public, synthetic or consented team data. Media and models stay on our machine; the agent works from structured findings.</p></details>
+  <details><summary>Why does it ignore the mouth?</summary><p>The mouth is the part the attacker forged to match the new audio, so it will match. Head nods and eyebrow raises are left over from the original recording and follow the original words, not the new ones.</p></details>
+</section>
+
+<section>
+  <span class="eyebrow">For study</span>
+  <h2>Glossary</h2>
+  <dl class="gloss">
+    <dt>Deepfake</dt><dd>Video or audio altered or generated with AI to show someone saying something they didn't.</dd>
+    <dt>Lip-sync</dt><dd>Re-animating only the mouth so it matches different audio.</dd>
+    <dt>Perceptual hash</dt><dd>A fingerprint of an image or video that stays similar when the file is re-compressed or resized (vpdq, pdqhash).</dd>
+    <dt>SHA-256</dt><dd>An exact fingerprint of a file; any change gives a different value. Used for exact matches and for the evidence PDF.</dd>
+    <dt>Embedding</dt><dd>A list of numbers that represents meaning, so similar phrases end up close together, even across languages (BGE-M3).</dd>
+    <dt>OCR</dt><dd>Optical character recognition: reading text from an image.</dd>
+    <dt>VAD</dt><dd>Voice activity detection: finding where someone is speaking.</dd>
+    <dt>Cross-correlation</dt><dd>Measuring how well two signals move together, including when one is slightly delayed (up to ±300 ms here).</dd>
+    <dt>Percentile</dt><dd>Where a value sits among the person's real clips, for example "less in sync than 97% of them".</dd>
+    <dt>Abstain</dt><dd>Declining to give a verdict when the evidence is weak; shown as NOT VERIFIED.</dd>
+    <dt>Frozen backbone</dt><dd>A pre-trained model used as-is to produce features, with only a small part trained on top.</dd>
+  </dl>
+</section>
+
+<footer>
+  FARQ · Team Off-Grid · Prepared for the preliminary review. All code is written during the event; all models are declared and pre-trained.
+</footer>
+
+</div>

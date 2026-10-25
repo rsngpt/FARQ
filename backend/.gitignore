@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+/.venv/
+/.pytest_cache/
+/.ruff_cache/
+
+# Secrets: only .env.example is committed
+/.env
+
+# Local media and samples (never commit real videos or PII)
+/media/
+/samples/
+
+# Converted model weights (large; made by scripts/convert_whisper.py).
+# Anchored with a leading / so src/farq/models/ etc. are never ignored by accident.
+/models/
