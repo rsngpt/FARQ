@@ -81,19 +81,31 @@ Copy the example environment configuration:
 cp .env.example .env
 ```
 
-Open `.env` in any text editor and configure your backend endpoint:
+Open `.env` in any text editor. 
+
+> [!NOTE]
+> **Zero-Config Standalone Demo Mode:** FARQ works out-of-the-box in Standalone Local Demo Mode! If you don't have a live GPU backend running, leave `FARQ_API_KEY` empty or as default. The bot will automatically run local triage, deliver native WhatsApp interactive polls, trigger 1930 emergency fast-paths, and generate high-definition visual verdict cards!
+
 ```env
 # Server Port
 PORT=3000
 
-# Mana's Deepfake Backend API URL (Cloudflare Tunnel, Cloud, or Localhost)
-FARQ_API_BASE_URL="https://afterwards-describes-split-triumph.trycloudflare.com"
-FARQ_API_KEY="tbrWvPQ2u8Fp7L59OlnhS6ymTJcGHgiE"
+# Backend Integration (Optional: Leave default for Standalone Local Demo Mode)
+FARQ_API_BASE_URL="http://localhost:8000"
+FARQ_API_KEY="your_api_key_or_leave_empty_for_standalone_demo"
 BACKEND_TIMEOUT_MS=90000
 
 # Security Pepper for HMAC-SHA256 User Anonymization
 USER_HASH_PEPPER="farq_pepper_secret_2026"
+FARQ_CALLBACK_SECRET="farq_callback_secret_2026"
 ```
+
+If you are running the GPU forensics backend locally with Docker:
+```bash
+cd backend
+docker compose up -d
+```
+And set `FARQ_API_BASE_URL="http://localhost:8000"` and `FARQ_API_KEY` to the value configured in `backend/.env`.
 
 ---
 

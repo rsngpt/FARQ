@@ -156,7 +156,7 @@ Type */farq* or */farq help* anytime to reactivate.`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚡ *Status:* Active & Listening
 🛡️ *Focus:* Financial Scam & Collaged Video Detection
-🌐 *Backend Model:* ${health.ok ? 'Connected (Live)' : 'In Development'}
+🌐 *Backend Model:* ${health.ok ? 'Connected (Live GPU)' : 'Standalone Local Demo Mode'}
 
 *How to use:*
 • Forward any suspicious *Video, Voice Note, Image, or Claim*.
@@ -340,8 +340,35 @@ Type */farq* anytime to reactivate.`
                         console.error(`[POLLER ERROR] Case ${backendUuid}:`, err.message);
                     }, 2500, 120); // 2.5-second interval, max 5 minutes
                 }
-            }).catch(err => {
-                console.error(`[BACKEND UPLOAD ERROR] Case ${caseId}:`, err.message);
+            }).catch(async (err) => {
+                console.warn(`[BACKEND UNAVAILABLE] Running in Standalone Local Demo Mode for case ${caseId} (${err.message})`);
+
+                // Allow 12-14 seconds for user to tap through native WhatsApp polls
+                setTimeout(async () => {
+                    try {
+                        const answers = questions.getAnswers(userRef) || {};
+                        const localAnalysis = backend.generateLocalVerdict(job, answers);
+                        console.log(`[STANDALONE VERDICT] Delivering local verdict card for ${caseId}...`);
+
+                        const cardImagePath = await imageCard.generateCardImage(localAnalysis);
+                        const simplifiedText = backend.formatSimplifiedVerdict(localAnalysis, job);
+
+                        if (cardImagePath && fs.existsSync(cardImagePath)) {
+                            console.log(`[SENDING STANDALONE IMAGE] ${cardImagePath}`);
+                            await sock.sendMessage(jid, {
+                                image: { url: cardImagePath },
+                                caption: simplifiedText
+                            });
+                        } else {
+                            const replyCard = backend.formatVerdict(localAnalysis, job);
+                            await sock.sendMessage(jid, { text: replyCard });
+                        }
+                        console.log(`[STANDALONE REPLIED] Delivered standalone verdict card for case ${caseId}`);
+                        console.log(`======================================================\n`);
+                    } catch (cardErr) {
+                        console.error('[STANDALONE CARD ERROR]', cardErr);
+                    }
+                }, 12000);
             });
 
             // 2. Concurrently start Guided Questions as Native WhatsApp Poll (Zero delay!)

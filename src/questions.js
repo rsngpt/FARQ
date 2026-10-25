@@ -43,6 +43,13 @@ class GuidedQuestionsManager {
         this.activeSessions.delete(userRef);
     }
 
+    getAnswers(userRef) {
+        const session = this.activeSessions.get(userRef);
+        if (session && session.answers) return session.answers;
+        const last = this.lastCompletedAnswers.get(userRef);
+        return (last && last.answers) || {};
+    }
+
     getQuestion1Payload() {
         return {
             type: 'poll',
