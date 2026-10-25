@@ -1,109 +1,187 @@
-# FARQ - WhatsApp Intake & Deepfake Verification Engine
+# FARQ (फ़र्क) - WhatsApp Intake & Financial Deepfake Verification Engine
 
-FARQ is an automated WhatsApp verification bot designed for end-to-end deepfake and misinformation analysis. The entire workflow is controlled 100% via WhatsApp chat—allowing professional live demos without touching the host laptop.
+**Team Off-Grid** · Amazon AI Cyber Security Hackathon Finale, Track 3: Financial Deepfakes · IIT Delhi  
+*Client / Intake Engine:* **Roshan Gupta** | *Detection & ML Pipeline:* **Mana Sharma**
 
----
-
-## 🏗️ Architecture
-
-```
-Presenter on WhatsApp
-       │
-       ▼ (Send "/farq" to activate)
-[Baileys WebSocket Engine]  <--- Direct encrypted mobile protocol (Zero Chromium)
-       │
-       ├──> [Session Manager] (Chat-driven: /farq toggles ON/OFF, stays idle otherwise)
-       │
-       ├──> [Media Storage] (Downloads raw images/videos/audio to ./media_storage/)
-       │
-       └──> [Deepfake Backend Client] (src/backend.js)
-                   │
-                   ▼ (HTTP POST Multipart/JSON via Cloudflare Tunnel or Cloud)
-          [FastAPI Deepfake Model Engine]
-                   │
-                   ▼ (JSON Verdict: verdict, reasons, entities, signed report)
-          [WhatsApp Verdict Card] (🚫 CONFIRMED_SCAM / ⚠️ LIKELY_SCAM / ❔ NOT_VERIFIED)
-```
+FARQ is a privacy-first, zero-browser WhatsApp verification bot designed for real-time financial deepfake detection. The entire verification lifecycle is controlled 100% via WhatsApp—featuring native 1-tap interactive polls, an instant 1930 Cyber Fraud Emergency fast-path, and high-impact visual verdict card images with signed court-admissible PDF reports.
 
 ---
 
-## 📱 Chat-Controlled Demo Lifecycle (Zero-Laptop Operation)
+## 🏗️ System Architecture
 
-1. **Activate from Chat:**
-   * Send `/farq` from any WhatsApp chat.
-   * Bot replies: `🟢 FARQ Intake Engine: ONLINE` and checks backend health.
-2. **Forward or Send Suspicious Content:**
-   * Forward any **Photo, Video, Audio clip, or Text claim**.
-   * Bot immediately begins streaming to Mana's backend via `POST /cases`.
-   * Concurrently sends **3 Guided Context Questions** (`claims_to_be`, `asks_for`, `money_sent`).
-   * **1930 Cyber Fraud Fast-Path**: If money was paid, immediately issues national helpline and bank-freeze warning.
-   * Returns a detailed analysis card:
-     * 🚫 **CONFIRMED SCAM** (Source found in official archives, altered signals verified)
-     * ⚠️ **LIKELY SCAM** (Acoustic/visual mismatch, face and voice not recorded together)
-     * ❔ **NOT VERIFIED** (Inconclusive; warns against paying strangers)
-     * 📄 **Signed Evidence Report (PDF)** (Court-admissible police docket ready to file)
-3. **Close Session & Put Server to Standby:**
-   * Send `/farq` again (or `/farq quit`).
-   * Bot replies: `🔴 FARQ Intake Engine: STANDBY`.
-   * **The bot stays completely silent and idle (0% server load) until `/farq` is called again.**
+```
+Victim / Citizen on WhatsApp
+       │
+       ▼ (Send "/farq" to activate intake session)
+[Baileys WebSocket Engine]  <--- Direct binary WebSocket protocol (Zero Chromium, <50MB RAM)
+       │
+       ├──> [Session Gatekeeper] (Strict opt-in: /farq toggles ON/OFF, ignores group noise)
+       │
+       ├──> [HMAC-SHA256 Privacy Engine] (Keyed pepper hash: Zero raw phone numbers stored)
+       │
+       ├──> [Parallel Dispatcher] (Streams video via multipart POST /cases at millisecond zero)
+       │           │
+       │           ▼
+       │     [Mana's GPU Forensics Backend] (FastAPI, PyTorch, Celery, Redis)
+       │     • Acoustic & visual lip-sync mismatch (Wav2Lip / SyncNet)
+       │     • Frame-by-frame 3D facial landmark tracking
+       │     • Official speech archive cross-matching
+       │     • OCR entity extraction (scammer UPI IDs, phone numbers, links)
+       │
+       ├──> [Interactive Polls Engine] (Sends 3 native 1-tap polls: Identity, Ask, Paid?)
+       │           │
+       │           ├──> (If user paid) ──► 🚨 Immediate 1930 Cyber Fraud Helpline Alert!
+       │           └──> (PATCH /cases/{id}/answers) ──► Injects statement into police PDF
+       │
+       └──> [2.5s State-Machine Poller] (GET /cases/{id})
+                   │
+                   ▼ (Status: done)
+          [WhatsApp Visual Verdict Card]
+          • High-res generated PNG: 🚨 A HUGE SCAM ALERT / ⚠️ FOCUS INSURED / 🛡️ NO SCAM FOUND
+          • Ultra-minimal caption with proof breakdown & scammer UPI/phone
+          • Signed Evidence report (PDF) ready to file on cybercrime.gov.in
+```
+
+---
+
+## 🚀 How to Run the Project on Your Own Device
+
+Follow these step-by-step instructions to get FARQ running locally in under 3 minutes:
+
+### 1. Prerequisites
+Make sure you have the following installed on your machine:
+* **Node.js** (v18, v20, or v24 LTS): [nodejs.org](https://nodejs.org)
+* **Python 3** (v3.9+): [python.org](https://python.org)
+* **Pillow (PIL)** for generating high-definition visual verdict cards:
+  ```bash
+  pip3 install pillow
+  ```
+
+---
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/rsngpt/FARQ.git
+cd FARQ
+```
+
+---
+
+### 3. Install Node.js Dependencies
+```bash
+npm install
+```
+*(Dependencies are ultra-lightweight: `@whiskeysockets/baileys`, `dotenv`, `pino`, `qrcode`, `mime-types`. No heavy browser automation or Puppeteer required!)*
+
+---
+
+### 4. Configure Environment Variables
+Copy the example environment configuration:
+```bash
+cp .env.example .env
+```
+
+Open `.env` in any text editor and configure your backend endpoint:
+```env
+# Server Port
+PORT=3000
+
+# Mana's Deepfake Backend API URL (Cloudflare Tunnel, Cloud, or Localhost)
+FARQ_API_BASE_URL="https://afterwards-describes-split-triumph.trycloudflare.com"
+FARQ_API_KEY="tbrWvPQ2u8Fp7L59OlnhS6ymTJcGHgiE"
+BACKEND_TIMEOUT_MS=90000
+
+# Security Pepper for HMAC-SHA256 User Anonymization
+USER_HASH_PEPPER="farq_pepper_secret_2026"
+```
+
+---
+
+### 5. Start the Engine
+```bash
+npm start
+```
+
+---
+
+### 6. Link Your WhatsApp Account
+1. Once launched, a **QR code** will appear directly in your terminal.
+2. *(Optional)* You can also open the local status dashboard at **[http://localhost:3000](http://localhost:3000)** to view the QR code in your web browser.
+3. Open **WhatsApp** on your phone:
+   * Go to **Settings** > **Linked Devices** > **Link a Device**.
+   * Scan the QR code.
+4. Once scanned, session credentials are securely cached in `./baileys_auth/`. You will not need to re-scan on subsequent restarts.
+
+---
+
+### 7. How to Test & Use on WhatsApp
+Open a WhatsApp chat with the connected number:
+
+1. **Activate the Engine:**
+   * Send `/farq`
+   * The bot will immediately reply: `🟢 FARQ Intake Engine: ONLINE`.
+2. **Forward Any Suspicious Media:**
+   * Forward any **Video, Voice Note, Image, or Text claim**.
+   * The bot immediately begins uploading the media to the backend in the background.
+3. **Answer the 1-Tap Interactive Polls:**
+   * **Poll 1:** *Who is it claiming to be?* (Govt / VIP / Bank / Friend)
+   * **Poll 2:** *What do they want?* (Invest / Transfer / OTP)
+   * **Poll 3:** *Have you already sent money?* (Yes / No)
+   * *If you select "Yes", the bot instantly triggers the 1930 Cyber Fraud Helpline alert.*
+4. **Receive the Visual Verdict Card:**
+   * In 20–30 seconds, the bot delivers:
+     * 🖼️ **Visual Card Image**: `🚨 A HUGE SCAM ALERT`, `⚠️ FOCUS INSURED / NOT VERIFIED`, or `🛡️ NO SCAM FOUND`.
+     * 📝 **Ultra-minimal caption**: Exact acoustic/visual mismatch proof + scammer UPI/phone.
+     * 📄 **Signed Evidence Report (PDF)**: Court-admissible complaint docket.
+5. **Close Session:**
+   * Send `/farq` again (or `/farq quit`) to return the engine to `🔴 STANDBY`.
 
 ---
 
 ## 📁 Modular Project Structure
 
 ```
-farq/
-├── media_storage/            # Staged media files & jobs.json manifest
-│   ├── jobs.json             # Structured manifest of all intake jobs
-│   └── *.jpeg / *.mp4        # Downloaded images, videos, audio clips
+FARQ/
+├── media_storage/            # Staged media files & generated verdict PNG cards
+│   └── jobs.json             # Structured manifest of intake jobs (git-ignored)
 │
-├── baileys_auth/             # WhatsApp Multi-Device encrypted credentials
+├── baileys_auth/             # WhatsApp Multi-Device encrypted credentials (git-ignored)
 │
 ├── src/
-│   ├── config.js             # Central paths, backend URL & environment variables
-│   ├── backend.js            # Sends media/text to backend & formats WhatsApp cards
-│   ├── storage.js            # Saves media to disk & updates jobs.json
-│   ├── session.js            # Tracks active user sessions (/farq toggle & quit)
+│   ├── config.js             # Environment variables & directory paths
+│   ├── backend.js            # Live API integration (POST /cases, GET /cases, PATCH /answers)
+│   ├── generate_card.py      # High-definition 1200x675 visual verdict card renderer (Pillow)
+│   ├── image_card.js         # Node.js wrapper for asynchronous card generation
+│   ├── interactive.js        # Native WhatsApp Polls & robust vote decryption (LID & JID)
+│   ├── questions.js          # 3-question guided triage & dynamic complaint synchronizer
+│   ├── session.js            # Strict opt-in session gatekeeper (/farq toggle & quit)
+│   ├── crypto.js             # Keyed HMAC-SHA256 user privacy anonymizer
 │   ├── dashboard.js          # Local web status & /jobs API (http://localhost:3000)
-│   └── whatsapp.js           # Baileys client connection & event handlers
+│   ├── help.js               # Advisory triage consultation helper desk
+│   ├── storage.js            # Binary buffer streaming to disk & ledger
+│   └── whatsapp.js           # Baileys client connection & event orchestrator
 │
-├── mock_backend.py           # FastAPI reference server for deepfake model integration
+├── docs/
+│   └── FARQ_SPEC.md          # Full product and functional specification
+│
 ├── index.js                  # Clean main entry point
-├── package.json              # Lightweight dependencies (No Puppeteer / Chrome)
-└── .gitignore                # Protects session keys and user media
+├── package.json              # Lightweight dependencies (<50MB RAM footprint)
+├── .env.example              # Template environment variables
+└── README.md                 # Complete project guide and documentation
 ```
 
 ---
 
-## 🚀 Running the Bot
+## 🔒 Privacy & Responsible AI
 
-### 1. Start the Bot
-```bash
-npm start
-```
-* The bot connects via Baileys WebSocket and listens for `/farq`.
-* Session credentials are saved in `baileys_auth/`, so re-scanning is not required.
+* **Privacy by Design**: FARQ hashes citizen phone numbers using keyed `HMAC-SHA256` before transmission. Raw phone numbers are **never stored, logged, or sent** to the cloud GPU servers.
+* **No Confusing Percentages**: Probabilistic scores like *"87.4% fake"* cause confusion. FARQ delivers 3 clear, evidence-backed verdicts:
+  1. `CONFIRMED_SCAM`: High confidence alteration + original source located in official archives.
+  2. `LIKELY_SCAM`: Acoustic/visual anomalies detected (lip movements do not match audio).
+  3. `NOT_VERIFIED`: Inconclusive evidence; bot explicitly warns against paying strangers.
+* **1930 Cybercrime Fast-Path**: Direct actionable instructions to freeze funds within the critical 2-hour golden window.
 
 ---
 
-## 🤝 Teammate Backend Integration (No Localhost Limitation)
-
-Your teammate can develop their Python model on their own machine and connect directly to your bot over the internet.
-
-### Option A: Free Cloudflare Tunnel (Recommended)
-1. Your teammate runs their FastAPI backend on port 5001:
-   ```bash
-   python3 mock_backend.py
-   ```
-2. Your teammate exposes it to the internet with 1 command (zero signup):
-   ```bash
-   cloudflared tunnel --url http://localhost:5001
-   ```
-3. Cloudflare gives a free HTTPS URL (e.g. `https://funny-dog-123.trycloudflare.com`).
-4. Update `DEEPFAKE_BACKEND_URL` in your `.env`:
-   ```env
-   DEEPFAKE_BACKEND_URL="https://funny-dog-123.trycloudflare.com/api/deepfake/analyze"
-   ```
-
-### Option B: Cloud Hosting
-Deploy `mock_backend.py` or your teammate's model to **Railway**, **Render**, or **Hugging Face Spaces**, and set the public URL in `.env`.
+## 📄 License
+ISC License · Built for the **Amazon AI Cyber Security Hackathon Finale 2026** (Track 3) by **Team Off-Grid**.
