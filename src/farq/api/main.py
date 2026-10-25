@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 
-from farq.api import cases, metrics
+from farq.api import cases, metrics, reports
 
 app = FastAPI(title="FARQ")
+app.include_router(reports.router)  # signed links; no API key needed
 app.include_router(cases.router)
 app.include_router(metrics.router)
 

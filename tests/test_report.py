@@ -34,17 +34,39 @@ def test_report_escapes_message_text(client, repo, rules, media, queued):
     assert "<script>" not in report_html(case)
 
 
-def test_result_links_the_pdf(client, repo, rules, media, queued, set_setting):
+def test_result_links_the_pdf_with_a_signature(client, repo, rules, media, queued, set_setting):
+    from farq.api.reports import report_token
+
     set_setting("PUBLIC_BASE_URL", "https://example.trycloudflare.com/")
     case = _done_case(client, repo, rules, media, queued)
     pdf_url = client.get(f"/cases/{case.id}").json()["report"]["pdf_url"]
-    assert pdf_url == f"https://example.trycloudflare.com/cases/{case.id}/report.pdf"
+    assert pdf_url == (
+        f"https://example.trycloudflare.com/cases/{case.id}/report.pdf?t={report_token(case.id)}"
+    )
 
 
-def test_pdf_endpoint_needs_a_finished_case_and_the_key(client):
+def test_pdf_needs_the_key_or_a_valid_signed_link(client, repo, rules, media, queued):
+    from farq.api.reports import report_token
+
+    case = _done_case(client, repo, rules, media, queued)
+    path = f"/cases/{case.id}/report.pdf"
+    no_key = {"X-API-Key": ""}
+    assert client.get(path, headers=no_key).status_code == 401
+    assert client.get(path + "?t=0123456789abcdef", headers=no_key).status_code == 401
+    other = "00000000-0000-0000-0000-000000000000"  # a signature for another case
+    assert client.get(f"{path}?t={report_token(other)}", headers=no_key).status_code == 401
+    # The valid signature passes the check (the PDF itself needs WeasyPrint;
+    # where it's missing, rendering fails after the check, not with 401).
+    try:
+        status = client.get(f"{path}?t={report_token(case.id)}", headers=no_key).status_code
+    except OSError:
+        status = "passed the check; WeasyPrint not installed here"
+    assert status != 401
+
+
+def test_pdf_endpoint_needs_a_finished_case(client):
     case_id = client.post("/cases", json=TEXT_CLAIM).json()["case_id"]
     assert client.get(f"/cases/{case_id}/report.pdf").status_code == 409
-    assert client.get(f"/cases/{case_id}/report.pdf", headers={"X-API-Key": "x"}).status_code == 401
 
 
 def test_pdf_renders(client, repo, rules, media, queued):

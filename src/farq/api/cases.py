@@ -7,7 +7,7 @@ from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ValidationError
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
@@ -123,23 +123,6 @@ def record_answers(case_id: UUID, answers: Answers, repo: RepoDep) -> dict[str, 
     repo.update_context(case_id, case.context.model_copy(update=updates))
     repo.commit()
     return {"status": "answers_recorded", "case_id": str(case_id)}
-
-
-@router.get("/{case_id}/report.pdf")
-def get_report(case_id: UUID, repo: RepoDep) -> Response:
-    """Evidence PDF for the user to attach to a cybercrime.gov.in complaint."""
-    from farq.report import report_pdf
-
-    case = repo.load(case_id)
-    if case is None:
-        raise HTTPException(404, "Case not found")
-    if case.decision is None:
-        raise HTTPException(409, "The check isn't finished yet")
-    return Response(
-        report_pdf(case),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="farq-report-{case_id}.pdf"'},
-    )
 
 
 @router.get("/{case_id}")
