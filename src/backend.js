@@ -337,8 +337,8 @@ function formatSimplifiedVerdict(analysis, job) {
 • No video or voice manipulation detected.${pdfLine}`;
     }
 
-    // Default: NOT_VERIFIED / FOCUS INSURED
-    return `⚠️ *FOCUS INSURED / NOT VERIFIED*
+    // Default: NOT_VERIFIED / LIKELY NOT A SCAM
+    return `⚠️ *LIKELY NOT A SCAM*
 • Inconclusive evidence. Never send money to strangers or WhatsApp trading tips!${pdfLine}`;
 }
 

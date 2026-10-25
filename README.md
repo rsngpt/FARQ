@@ -37,7 +37,7 @@ Victim / Citizen on WhatsApp
                    │
                    ▼ (Status: done)
           [WhatsApp Visual Verdict Card]
-          • High-res generated PNG: 🚨 A HUGE SCAM ALERT / ⚠️ FOCUS INSURED / 🛡️ NO SCAM FOUND
+          • High-res generated PNG: 🚨 A HUGE SCAM ALERT / ⚠️ LIKELY NOT A SCAM / 🛡️ NO SCAM FOUND
           • Ultra-minimal caption with proof breakdown & scammer UPI/phone
           • Signed Evidence report (PDF) ready to file on cybercrime.gov.in
 ```
@@ -142,7 +142,7 @@ Open a WhatsApp chat with the connected number:
    * *If you select "Yes", the bot instantly triggers the 1930 Cyber Fraud Helpline alert.*
 4. **Receive the Visual Verdict Card:**
    * In 20–30 seconds, the bot delivers:
-     * 🖼️ **Visual Card Image**: `🚨 A HUGE SCAM ALERT`, `⚠️ FOCUS INSURED / NOT VERIFIED`, or `🛡️ NO SCAM FOUND`.
+     * 🖼️ **Visual Card Image**: `🚨 A HUGE SCAM ALERT`, `⚠️ LIKELY NOT A SCAM`, or `🛡️ NO SCAM FOUND`.
      * 📝 **Ultra-minimal caption**: Exact acoustic/visual mismatch proof + scammer UPI/phone.
      * 📄 **Signed Evidence Report (PDF)**: Court-admissible complaint docket.
 5. **Close Session:**

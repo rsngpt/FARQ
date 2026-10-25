@@ -309,7 +309,7 @@ Type */farq* anytime to reactivate.`
                     backend.pollCaseUntilDone(backendUuid, async (analysis) => {
                         console.log(`[VERDICT READY] Case ${backendUuid} status is DONE. Generating visual verdict image...`);
 
-                        // 1. Generate visual verdict PNG image card (A HUGE SCAM ALERT / FOCUS INSURED / NO SCAM FOUND)
+                        // 1. Generate visual verdict PNG image card (A HUGE SCAM ALERT / LIKELY NOT A SCAM / NO SCAM FOUND)
                         const cardImagePath = await imageCard.generateCardImage(analysis);
                         const simplifiedText = backend.formatSimplifiedVerdict(analysis, job);
 

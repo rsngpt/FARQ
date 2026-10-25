@@ -47,12 +47,12 @@ def generate_verdict_card(data, output_path):
         bullet_2 = "• No voice cloning or visual boundary artifacts found"
         action_text = "✅ NATURAL RECORDING VERIFIED"
         action_bg = (4, 120, 87)
-    else: # NOT_VERIFIED / FOCUS INSURED
+    else: # NOT_VERIFIED / LIKELY NOT A SCAM
         bg_color = (22, 19, 13)
         panel_color = (34, 29, 20)
         accent_color = (245, 158, 11)     # Amber / Gold
         badge_bg = (217, 119, 6)
-        badge_text = "⚠️ FOCUS INSURED / NOT VERIFIED"
+        badge_text = "⚠️ LIKELY NOT A SCAM"
         title_text = "Inconclusive Evidence"
         sub_text = "Could not verify official archives. Treat this video with extreme caution."
         bullet_1 = "• Real ministers and officials NEVER ask you to invest on WhatsApp"
