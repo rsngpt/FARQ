@@ -8,9 +8,11 @@ For a part of the video whose picture matched a library clip:
    change in the mouth.
 3. Compare what was said in the original at that moment with what is said here.
 
-Mouth/face ratio thresholds are PROVISIONAL: from one public-domain test photo
-(re-compressed only: 1.01-1.13; mouth re-drawn: 4.9-35.4). Re-calibrate on the
-team's genuine clips before relying on them.
+Lower/upper face thresholds come from real measurements (25 Oct; median over
+10 frame pairs): Roshan's genuine clips squeezed to 480p 1.04-1.09 (4 clips),
+a plain stitch 1.06, a Wav2Lip GAN lip-sync of his face 1.41 (1.43 squeezed).
+Small sample (4 genuine, 1 lip-sync in 2 encodings): re-check as more fakes are made.
+Single frames are noisy (genuine frames reached 2.3), so levels use the median.
 """
 
 import hashlib
@@ -33,8 +35,9 @@ SEARCH_FRAMES = 12  # +/- frames of the original searched around the expected on
 MAX_SPAN_S = 20.0  # longest stretch compared per segment
 FACE_SAMPLES = 10  # frame pairs checked for mouth vs face
 
-RATIO_MEDIUM = 1.5  # provisional; see module docstring
-RATIO_HIGH = 3.0
+RATIO_MEDIUM = 1.15  # from real measurements; see module docstring
+RATIO_HIGH = 1.25  # midpoint of the gap between genuine (<= 1.09) and lip-sync (>= 1.41)
+SPAN_SMOOTHING = 3  # samples in the rolling median used to mark altered spans
 
 FACE_MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/face_landmarker/"
@@ -42,11 +45,13 @@ FACE_MODEL_URL = (
 )
 FACE_MODEL_SHA256 = "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
 
-# MediaPipe face-mesh landmark numbers for the outer lips and the face outline.
-LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185]
-FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400,
-             377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103,
-             67, 109]  # fmt: skip
+# MediaPipe face-mesh landmark numbers.
+# Lower face: nose base (2), lower cheeks (58, 288), jaw (172, 397), chin (152). Lip-sync
+# tools such as Wav2Lip regenerate this whole area, not just the lips.
+LOWER_FACE = [2, 58, 288, 172, 397, 152]
+# Upper face: forehead (10), brows (54, 284), outer eye corners (33, 263), nose bridge
+# between the eyes (6). Lip-sync leaves this untouched, so it is the reference.
+UPPER_FACE = [10, 54, 284, 33, 263, 6]
 
 
 class FaceFinder(Protocol):
@@ -54,7 +59,8 @@ class FaceFinder(Protocol):
     version: str
 
     def regions(self, rgb: np.ndarray) -> tuple[Box, Box] | None:
-        """(mouth box, face box) for the main face, or None if there's no face."""
+        """(region a lip-sync would change, untouched reference region) for the
+        main face, or None if there's no face."""
         ...
 
 
@@ -94,7 +100,11 @@ class MediaPipeFaceFinder:
         if pts is None:
             return None
         h, w = rgb.shape[:2]
-        return _box(pts[LIPS], pad=0.25, size=(w, h)), _box(pts[FACE_OVAL], pad=0.0, size=(w, h))
+        # Lower vs upper face, not lips vs the rest: Wav2Lip regenerates the jaw and
+        # chin too, which diluted a lips-only comparison (real lip-sync: 1.58x only).
+        lower = _box(pts[LOWER_FACE], pad=0.05, size=(w, h))
+        upper = _box(pts[UPPER_FACE], pad=0.05, size=(w, h))
+        return lower, upper
 
     def motion(self, rgb: np.ndarray) -> tuple[float, float] | None:
         """Head nod and eyebrow height for the voice-and-body check."""
@@ -158,21 +168,31 @@ def change_ratio(original: np.ndarray, query: np.ndarray, mouth: Box, face: Box)
 
 
 def mouth_level(ratios: list[float]) -> str:
-    """low / medium / high from per-frame ratios (provisional thresholds)."""
+    """low / medium / high from the median of the per-frame ratios."""
     if not ratios:
         return "unknown"
-    high_share = sum(r >= RATIO_HIGH for r in ratios) / len(ratios)
-    if high_share >= 0.3:
+    median = float(np.median(ratios))
+    if median >= RATIO_HIGH:
         return "high"
-    if float(np.median(ratios)) >= RATIO_MEDIUM or high_share > 0:
+    if median >= RATIO_MEDIUM:
         return "medium"
     return "low"
 
 
 def altered_spans(samples: list[tuple[float, float]], step: float) -> list[dict[str, float]]:
-    """Runs of sampled times (video seconds, ratio) at or above RATIO_HIGH."""
+    """Runs of sampled times (video seconds, ratio) whose rolling median of
+    SPAN_SMOOTHING samples is at or above RATIO_HIGH, so one noisy frame can't
+    mark a span."""
+    ratios = [r for _, r in samples]
+    k = min(SPAN_SMOOTHING, len(ratios))
+    # Always a full window (shifted inwards at the edges): a 2-value window at
+    # the edge would let a single spike through.
+    smoothed = [
+        float(np.median(ratios[min(max(0, i - k // 2), len(ratios) - k) :][:k]))
+        for i in range(len(ratios))
+    ]
     spans: list[dict[str, float]] = []
-    for t, ratio in samples:
+    for (t, _), ratio in zip(samples, smoothed, strict=True):
         if ratio < RATIO_HIGH:
             continue
         if spans and t - spans[-1]["end"] <= step + 1e-6:

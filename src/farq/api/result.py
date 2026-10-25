@@ -48,6 +48,25 @@ NEXT_STEPS = {
 }
 MONEY_SENT_STEP = "You have already paid: call 1930 now to freeze the money, and tell your bank."
 
+# "Someone you know asks for money": with no public source to match, FARQ can't
+# show it's fake, but the pattern itself is a classic impersonation scam, so the
+# reply says how to check. The verdict stays NOT_VERIFIED (it may be genuine).
+KNOWN_PERSON = {"family_friend", "company_boss"}
+MONEY_ASKS = {"send_money", "otp_link_kyc"}
+KNOWN_PERSON_HEADLINE = "Check before you pay."
+KNOWN_PERSON_SUMMARY = (
+    "This matches a common scam: someone you know asking for money. Videos and voices "
+    "can be faked, so confirm it's really them before you pay."
+)
+KNOWN_PERSON_REASON = (
+    "It says it's from someone you know and asks for money: a common impersonation scam."
+)
+KNOWN_PERSON_STEPS = [
+    "Call them back on the number you already have, not one from this message.",
+    "Ask something only the real person would know.",
+    "Never share an OTP, PIN or password.",
+]
+
 ALTERATION_TYPES = {"not_recorded_together", "words_differ_from_original", "mouth_altered"}
 MAX_SWAP_WORDS = 6
 
@@ -88,9 +107,16 @@ def build_result(case: CaseFile) -> dict[str, Any]:
     altered = [e for e in case.evidence if e.type in ALTERATION_TYPES]
     copy = next((e for e in case.evidence if e.type == "unaltered_copy"), None)
 
+    known_person = _known_person_asks_money(case)
     headline = HEADLINES[verdict]
+    summary = _summary(verdict, cited, copy)
+    reasons = [{"text": e.reason, "evidence_id": e.id} for e in cited]
     if altered and verdict != Verdict.NOT_VERIFIED:
         headline = ALTERED_HEADLINE
+    if known_person:
+        reasons.insert(0, {"text": KNOWN_PERSON_REASON, "evidence_id": "guided_answers"})
+        if verdict == Verdict.NOT_VERIFIED:
+            headline, summary = KNOWN_PERSON_HEADLINE, KNOWN_PERSON_SUMMARY
     if verdict == Verdict.NOT_VERIFIED and _ingest_failed(case):
         headline = "We couldn't open this file. Please forward the original again."
 
@@ -99,8 +125,8 @@ def build_result(case: CaseFile) -> dict[str, Any]:
         "status": "done",
         "verdict": verdict.value.upper(),
         "headline": headline,
-        "summary": _summary(verdict, cited, copy),
-        "reasons": [{"text": e.reason, "evidence_id": e.id} for e in cited[:MAX_REASONS]],
+        "summary": summary,
+        "reasons": reasons[:MAX_REASONS],
         "signals": [
             {"name": e.type, "level": e.level.value, "explanation": e.reason}
             for e in case.evidence
@@ -180,8 +206,19 @@ def _entities(case: CaseFile) -> list[dict[str, Any]]:
     ]
 
 
+def _known_person_asks_money(case: CaseFile) -> bool:
+    """Guided answers say family/friend or company/boss, and either the answers or
+    the message itself ask for money (or an OTP / link / KYC)."""
+    ctx = case.context
+    if ctx.claims_to_be not in KNOWN_PERSON:
+        return False
+    return ctx.asks_for in MONEY_ASKS or any(e.type == "pitch_money_request" for e in case.evidence)
+
+
 def _next_steps(case: CaseFile, verdict: Verdict) -> list[str]:
     steps = list(NEXT_STEPS[verdict])
+    if _known_person_asks_money(case):
+        steps = KNOWN_PERSON_STEPS + [s for s in steps if s not in KNOWN_PERSON_STEPS]
     if case.context.money_sent:
         steps.insert(0, MONEY_SENT_STEP)
     return steps

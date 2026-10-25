@@ -64,6 +64,13 @@ def test_emails_and_short_numbers_are_not_entities():
     assert find_entities("write to help@example.com.") == []
 
 
+def test_money_request_in_english_and_hindi():
+    for text in ("Can you please give me some money?", "I need money urgently",
+                 "bhai thode paise bhej do", "मुझे पैसे भेज दो", "udhar chahiye"):  # fmt: skip
+        assert "money_request" in {m.kind for m in find_markers(text)}, text
+    assert "money_request" not in {m.kind for m in find_markers("I saved money this month")}
+
+
 def test_upi_id_at_the_end_of_a_sentence():
     found = [(f.kind, f.value) for f in find_entities("Pay to UPI farqdemo@okfakebank.")]
     assert found == [("upi_id", "farqdemo@okfakebank")]

@@ -98,6 +98,44 @@ def test_answers_shape_the_result_even_after_the_verdict(client, repo, rules, me
     assert "I have already sent money." in text
 
 
+FAMILY_ASK = TEXT_CLAIM | {
+    "idempotency_key": "c_family",
+    # The transcript of the team's real test video (24 Oct): a genuine request.
+    "text": "My bank has lost my money. Can you please give me some money? "
+    "My bank ID is 1122334. Please!",
+}
+
+
+def test_someone_you_know_asking_for_money_gets_check_before_you_pay(
+    client, repo, rules, media, queued
+):
+    case_id = client.post("/cases", json=FAMILY_ASK).json()["case_id"]
+    client.patch(f"/cases/{case_id}/answers",
+                 json={"claims_to_be": "family_friend", "asks_for": "send_money"})  # fmt: skip
+    run_pipeline(queued[0], repo, rules, media)
+    result = client.get(f"/cases/{case_id}").json()
+
+    assert result["verdict"] == "NOT_VERIFIED"  # it may be genuine: never accuse
+    assert result["headline"] == "Check before you pay."
+    assert "someone you know asking for money" in result["summary"]
+    assert result["reasons"][0]["evidence_id"] == "guided_answers"
+    assert "It asks you to send money." in " ".join(r["text"] for r in result["reasons"])
+    assert result["next_steps"][0].startswith("Call them back on the number you already have")
+
+
+def test_money_request_alone_from_an_official_is_not_the_family_pattern(
+    client, repo, rules, media, queued
+):
+    case_id = client.post("/cases", json=FAMILY_ASK | {"idempotency_key": "c_off"}).json()[
+        "case_id"
+    ]
+    client.patch(f"/cases/{case_id}/answers",
+                 json={"claims_to_be": "official", "asks_for": "send_money"})  # fmt: skip
+    run_pipeline(queued[0], repo, rules, media)
+    result = client.get(f"/cases/{case_id}").json()
+    assert result["headline"] != "Check before you pay."
+
+
 def test_answers_must_be_one_of_the_bot_options(client):
     case_id = client.post("/cases", json=TEXT_CLAIM).json()["case_id"]
     bad = client.patch(f"/cases/{case_id}/answers", json={"claims_to_be": "the_president"})

@@ -85,14 +85,19 @@ def test_mouth_edit_reads_high_only_where_it_happened(videos):
     assert result["thresholds"]["status"] == "provisional"
 
 
-def test_mouth_level_and_spans():
+def test_mouth_level_uses_the_median_like_the_real_measurements():
     assert mouth_level([]) == "unknown"
-    assert mouth_level([1.0, 1.1, 0.9]) == "low"
-    assert mouth_level([1.6, 1.7, 1.2]) == "medium"
-    assert mouth_level([4.0, 5.0, 1.0]) == "high"
-    assert altered_spans([(0.0, 1.0), (0.4, 4.0), (0.8, 5.0), (1.2, 1.0)], 0.4) == [
-        {"start": 0.4, "end": 1.2}
-    ]
+    # Genuine squeezed clip: median ~1.04, with one noisy frame at 2.3 -> still low.
+    assert mouth_level([1.04, 0.9, 2.3, 1.08, 1.0]) == "low"
+    assert mouth_level([1.2, 1.18, 1.1]) == "medium"
+    # Real Wav2Lip lip-sync: median ~1.41 -> high.
+    assert mouth_level([1.41, 1.12, 2.36, 1.5]) == "high"
+
+
+def test_one_noisy_frame_does_not_mark_an_altered_span():
+    assert altered_spans([(0.0, 1.0), (0.4, 2.3), (0.8, 1.0), (1.2, 1.0)], 0.4) == []
+    samples = [(0.0, 1.0), (0.4, 1.0), (0.8, 1.5), (1.2, 1.6), (1.6, 1.4), (2.0, 1.0), (2.4, 1.0)]
+    assert altered_spans(samples, 0.4) == [{"start": 0.8, "end": 2.0}]
 
 
 def _transcript(text, start=0.0, step=0.5):

@@ -58,6 +58,16 @@ MARKERS: list[tuple[str, re.Pattern[str], str]] = [
         ),
         "It pressures you to act quickly.",
     ),
+    (
+        "money_request",
+        re.compile(
+            r"\b(give|send|transfer|lend|need)\s+(me\s+)?(some\s+)?(money|cash|rupees|funds)\b|"
+            r"\bpaise?\s+(bhej|de|chahiye)|\budhaa?r\b|"
+            r"पैसे?\s*(भेज|दे|चाहिए)|उधार",
+            re.I,
+        ),
+        "It asks you to send money.",
+    ),
 ]
 
 
