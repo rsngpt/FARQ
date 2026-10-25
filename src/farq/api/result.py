@@ -62,7 +62,7 @@ KNOWN_PERSON_SUMMARY = (
     "We didn't find this video in any known scam. Videos and voices can be faked, "
     "so call them back on the number you already have before you send money."
 )
-COPY_HEADLINE = "This is the same as the original video. Nothing was changed."
+COPY_HEADLINE = "This video is original."
 KNOWN_PERSON_REASON = (
     "It says it's from someone you know and asks for money: a common impersonation scam."
 )
