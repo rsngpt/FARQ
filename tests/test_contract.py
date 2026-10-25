@@ -116,8 +116,8 @@ def test_someone_you_know_asking_for_money_gets_check_before_you_pay(
     result = client.get(f"/cases/{case_id}").json()
 
     assert result["verdict"] == "NOT_VERIFIED"  # it may be genuine: never accuse
-    assert result["headline"] == "Check before you pay."
-    assert "someone you know asking for money" in result["summary"]
+    assert result["headline"] == "This may be your family member asking for help."
+    assert "call them back" in result["summary"]
     assert result["reasons"][0]["evidence_id"] == "guided_answers"
     assert "It asks you to send money." in " ".join(r["text"] for r in result["reasons"])
     assert result["next_steps"][0].startswith("Call them back on the number you already have")
@@ -133,7 +133,7 @@ def test_money_request_alone_from_an_official_is_not_the_family_pattern(
                  json={"claims_to_be": "official", "asks_for": "send_money"})  # fmt: skip
     run_pipeline(queued[0], repo, rules, media)
     result = client.get(f"/cases/{case_id}").json()
-    assert result["headline"] != "Check before you pay."
+    assert "family member" not in result["headline"]
 
 
 def test_answers_must_be_one_of_the_bot_options(client):

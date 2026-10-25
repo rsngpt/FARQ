@@ -93,6 +93,31 @@ def test_pipeline_stage_stores_the_source_map(library, repo, rules, media, new_c
     assert case.evidence == []
 
 
+def test_recompressed_copy_of_a_known_fake_is_confirmed(
+    session, repo, rules, media, new_case, media_dir
+):
+    from farq.domain.casefile import Verdict
+    from farq.library import KNOWN_FAKE_PERSON
+    from farq.pipeline.ingest import ingest
+    from farq.pipeline.runner import run_pipeline
+    from farq.pipeline.source_map import source_map
+    from farq.pipeline.stages import Stage
+
+    add_clip(session, media, FakeAsrEngine(), media_dir / "clip-c.mp4", person=KNOWN_FAKE_PERSON,
+             title="fake-c", source="PIB Fact Check", consent_note=None)  # fmt: skip
+    copy = media_dir / "clip-c-forwarded.mp4"
+    ffmpeg_make(copy, "-i", str(media_dir / "clip-c.mp4"), "-vf", "scale=320:180",
+                "-c:v", "libx264", "-crf", "35")  # fmt: skip
+    stages = [Stage("ingest", "cpu", ingest), Stage("source_map", "cpu", source_map)]
+    case = run_pipeline(new_case(copy.read_bytes()), repo, rules, media, stages)
+
+    assert [e.type for e in case.evidence] == ["known_fake_copy"]
+    assert "confirmed as fake by PIB Fact Check" in case.evidence[0].reason
+    assert case.decision.verdict == Verdict.CONFIRMED_SCAM
+    data = case.artifact("source_map").data
+    assert data["originals"] == [] and data["library_clips"] == 0  # never an "original"
+
+
 def test_face_finder_failure_keeps_the_source_map(
     library, repo, rules, media, new_case, media_dir, monkeypatch
 ):

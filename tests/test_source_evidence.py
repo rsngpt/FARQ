@@ -118,6 +118,6 @@ def test_unchanged_copy_is_still_never_called_genuine(repo, rules, media, new_ca
     data = {"originals": [comp("low")], "speech": [voice("A", "Budget talk", clip_start=64.66)]}
     case = _verdict(repo, rules, media, new_case, data)
     assert case.decision.verdict == Verdict.NOT_VERIFIED
-    assert "matches “Budget talk” in our library without visible changes" in case.reply_text
+    assert "matches the original video “Budget talk”, with no visible changes" in case.reply_text
     assert "doesn't prove what it says is true" in case.reply_text
     assert "genuine." not in case.reply_text.replace("does not mean it is genuine.", "")

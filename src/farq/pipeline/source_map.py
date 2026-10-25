@@ -12,7 +12,7 @@ from farq.library import LibraryClip, load_clips
 from farq.media import ffmpeg
 from farq.pipeline.stages import StageContext, StageOutput
 from farq.settings import get_settings
-from farq.sourcemap.evidence import source_evidence
+from farq.sourcemap.evidence import known_fake_evidence, source_evidence
 from farq.sourcemap.original import (
     MAX_SPAN_S,
     ORIGINAL_FPS,
@@ -46,7 +46,9 @@ def source_map(case: CaseFile, ctx: StageContext, embedder: Embedder | None = No
     if fingerprints is None and transcript is None:
         return StageOutput()  # screenshot: nothing to map
     s = get_settings()
-    clips = load_clips(ctx.repo.session)
+    all_clips = load_clips(ctx.repo.session)
+    fakes = [c for c in all_clips if c.is_known_fake]
+    clips = [c for c in all_clips if not c.is_known_fake]
     if embedder is None and transcript is not None and any(c.phrases for c in clips):
         embedder = get_embedder(s.bge_m3_dir, s.bge_m3_revision, s.embed_threads)
 
@@ -63,8 +65,11 @@ def source_map(case: CaseFile, ctx: StageContext, embedder: Embedder | None = No
         ),  # fmt: skip
     }
     data["originals"] = _find_originals(case, ctx, data["visual"], clips, transcript)
+    fake_map = visual_map(fingerprints.data["frames"], fakes) if fingerprints and fakes else []
+    data["known_fakes"] = [seg for seg in fake_map if seg.get("clip_id")]
+    sources = {str(c.id): c.source for c in fakes}
     return StageOutput(
-        evidence=source_evidence(data),
+        evidence=known_fake_evidence(data["known_fakes"], sources) + source_evidence(data),
         artifacts=[
             Artifact(
                 stage="source_map",

@@ -11,6 +11,7 @@ from typing import Any
 
 from farq.channels.responder import reason_evidence
 from farq.domain.casefile import CaseFile, CaseStatus, Evidence, Verdict
+from farq.sourcemap.evidence import WORDS_DIFFER
 
 MAX_REASONS = 4
 
@@ -53,11 +54,15 @@ MONEY_SENT_STEP = "You have already paid: call 1930 now to freeze the money, and
 # reply says how to check. The verdict stays NOT_VERIFIED (it may be genuine).
 KNOWN_PERSON = {"family_friend", "company_boss"}
 MONEY_ASKS = {"send_money", "otp_link_kyc"}
-KNOWN_PERSON_HEADLINE = "Check before you pay."
+KNOWN_PERSON_HEADLINES = {
+    "family_friend": "This may be your family member asking for help.",
+    "company_boss": "This may really be your company or boss asking.",
+}
 KNOWN_PERSON_SUMMARY = (
-    "This matches a common scam: someone you know asking for money. Videos and voices "
-    "can be faked, so confirm it's really them before you pay."
+    "We didn't find this video in any known scam. Videos and voices can be faked, "
+    "so call them back on the number you already have before you send money."
 )
+COPY_HEADLINE = "This is the same as the original video. Nothing was changed."
 KNOWN_PERSON_REASON = (
     "It says it's from someone you know and asks for money: a common impersonation scam."
 )
@@ -113,10 +118,13 @@ def build_result(case: CaseFile) -> dict[str, Any]:
     reasons = [{"text": e.reason, "evidence_id": e.id} for e in cited]
     if altered and verdict != Verdict.NOT_VERIFIED:
         headline = ALTERED_HEADLINE
-    if known_person:
+    if copy is not None and verdict == Verdict.NOT_VERIFIED and not altered:
+        headline = COPY_HEADLINE
+    elif known_person:
         reasons.insert(0, {"text": KNOWN_PERSON_REASON, "evidence_id": "guided_answers"})
         if verdict == Verdict.NOT_VERIFIED:
-            headline, summary = KNOWN_PERSON_HEADLINE, KNOWN_PERSON_SUMMARY
+            headline = KNOWN_PERSON_HEADLINES[case.context.claims_to_be]
+            summary = KNOWN_PERSON_SUMMARY
     if verdict == Verdict.NOT_VERIFIED and _ingest_failed(case):
         headline = "We couldn't open this file. Please forward the original again."
 
@@ -160,7 +168,10 @@ def _original(case: CaseFile) -> dict[str, Any]:
         return {"found": False}
     best = originals[0]
     seg = best["segment"]
-    changes = (best.get("speech") or {}).get("changes", [])
+    speech = best.get("speech") or {}
+    # Words different throughout (a new voice track): a word-by-word list would
+    # be noise, and the reasons already say the words differ.
+    changes = speech.get("changes", []) if speech.get("similarity", 0) >= WORDS_DIFFER else []
     return {
         "found": True,
         "title": seg["title"],

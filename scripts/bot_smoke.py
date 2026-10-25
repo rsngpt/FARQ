@@ -28,6 +28,8 @@ def main() -> int:
     parser.add_argument("file", type=Path)
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--money-sent", action="store_true")
+    parser.add_argument("--claims-to-be", default="official", help="e.g. family_friend")
+    parser.add_argument("--asks-for", default="invest", help="guided answer, e.g. send_money")
     parser.add_argument("--timeout", type=float, default=180)
     args = parser.parse_args()
 
@@ -56,7 +58,7 @@ def main() -> int:
         r.raise_for_status()
         case_id = r.json()["case_id"]
 
-        answers = {"claims_to_be": "official", "asks_for": "invest",
+        answers = {"claims_to_be": args.claims_to_be, "asks_for": args.asks_for,
                    "money_sent": args.money_sent}  # fmt: skip
         r = c.patch(f"/cases/{case_id}/answers", json=answers)
         print(f"PATCH answers -> {r.status_code} {r.json()}")

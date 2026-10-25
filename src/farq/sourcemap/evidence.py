@@ -19,6 +19,31 @@ def clock(seconds: float) -> str:
     return f"{s // 60}:{s % 60:02d}"
 
 
+KNOWN_FAKE_MIN_S = 3.0  # seconds of picture matching a confirmed fake
+
+
+def known_fake_evidence(segments: list[dict[str, Any]], sources: dict[str, str]) -> list[Evidence]:
+    """Picture matches against fakes a public fact-check confirmed. PDQ survives
+    WhatsApp's recompression, so a forwarded copy still matches (unlike sha256)."""
+    by_clip: dict[str, list[dict[str, Any]]] = {}
+    for seg in segments:
+        by_clip.setdefault(seg["clip_id"], []).append(seg)
+    out = []
+    for clip_id, segs in by_clip.items():
+        seconds = sum(s["end"] - s["start"] for s in segs)
+        if seconds < KNOWN_FAKE_MIN_S:
+            continue
+        source = sources.get(clip_id, "a fact-check")
+        out.append(Evidence(
+            stage="source_map", type="known_fake_copy", source_type=SourceType.MATCH,
+            strength=Strength.DECISIVE, indicates=Indicates.SCAM, human_reviewed=True,
+            reason=f"This is a copy of a video already confirmed as fake by {source}.",
+            details={"clip_id": clip_id, "title": segs[0]["title"], "source": source,
+                     "matched_s": round(seconds, 1), "segments": segs},
+        ))  # fmt: skip
+    return out
+
+
 def source_evidence(data: dict[str, Any]) -> list[Evidence]:
     out: list[Evidence] = []
     for comp in data.get("originals", []):
@@ -91,7 +116,7 @@ def source_evidence(data: dict[str, Any]) -> list[Evidence]:
             out.append(Evidence(
                 stage="source_map", type="unaltered_copy", source_type=SourceType.MATCH,
                 strength=Strength.STRONG, indicates=Indicates.NOT_SCAM, level=Level.LOW,
-                reason=f"It matches “{title}” in our library without visible changes.",
+                reason=f"It matches the original video “{title}”, with no visible changes.",
                 details=comp,
             ))  # fmt: skip
     return out

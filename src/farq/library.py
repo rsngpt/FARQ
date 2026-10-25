@@ -37,6 +37,16 @@ class LibraryClip:
     media_key: str | None = None  # the clip's video in the media store
     binding_score: float | None = None  # voice-and-body sync of this genuine clip
 
+    @property
+    def is_known_fake(self) -> bool:
+        return self.person == KNOWN_FAKE_PERSON
+
+
+# Clips added with this person are fakes a public fact-check confirmed (e.g. PIB
+# Fact Check), not genuine recordings. Matched by picture only, so a forwarded,
+# recompressed copy is still recognised; never used as an "original".
+KNOWN_FAKE_PERSON = "known-fake"
+
 
 def add_clip(
     session: Session,

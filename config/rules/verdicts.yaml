@@ -26,6 +26,18 @@ rules:
           indicates: scam
           human_reviewed: true
 
+  - id: known_fake_copy
+    description: >
+      The picture matches a video a public fact-check (e.g. PIB Fact Check)
+      confirmed as fake, even after WhatsApp recompressed it.
+    verdict: confirmed_scam
+    when:
+      - evidence:
+          type: known_fake_copy
+          min_strength: decisive
+          indicates: scam
+          human_reviewed: true
+
   - id: picture_voice_mismatch
     description: >
       The picture and the voice come from different recordings in the library.
